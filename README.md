@@ -77,10 +77,43 @@ ampwrap nanopore -i input_directory -o output_directory
 ## Troubleshooting
 If you encounter issues during installation or execution, check the following:
 - Ensure that Conda/Mamba is properly installed and activated.
+```sh
+conda --help
+```
 - Verify that AmpWrap is installed in the correct Conda environment.
-- Check the logs for error messages and missing dependencies.
 
-For further assistance, refer to the official documentation or community forums.
+```sh
+ampwrap short --help
+```
+
+
+### V3-V4 Analysis
+
+Using the primers suggested in the Illumina protocol:
+
+- **Forward:** `CCTACGGGNGGCWGCAG`
+- **Reverse:** `GACTACHVGGGTATCTAATCC`
+
+you might encounter an issue when setting the `-l` parameter due to variation in the lengths of 16S segments. While this variation is not large, it does exist. In particular, there are two predominant **V3-V4** fragment lengths in nature:  
+
+- **~460 nts**
+- **~440 nts**  
+
+#### Choosing the Correct `-l` Parameter  
+
+To account for this variation, consider checking which option is better for your analysis:  
+
+- `-l 444` → `464 - 38` (primers)  
+- `-l 426` → `444 - 38` (primers)  
+
+#### Potential Issue with Incorrect `-l` Settings  
+
+If `-l` is not set properly (taking primer lengths into account), **Figaro** may select an incorrect pair of truncation parameters in **DADA2**, resulting in the following error:  
+
+```bash
+Warning message:
+In filterAndTrim(forward_reads, filtered_forward_reads, reverse_reads,  :
+  No reads passed the filter. Please revisit your filtering parameters.
 
 
 
