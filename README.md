@@ -113,9 +113,9 @@ If `-l` is not set properly (taking primer lengths into account), **Figaro** may
 ```bash
 Warning message:
 In filterAndTrim(forward_reads, filtered_forward_reads, reverse_reads,  :
-  No reads passed the filter. Please revisit your filtering parameters.
-
-
+No reads passed the filter. Please revisit your filtering parameters.
+```
+To avoid this issue, ensure that the chosen -l value aligns with the expected fragment lengths in your dataset.
 
  
 
