@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+
+import argparse
+import glob
+import os
+import sys
+import yaml
+import subprocess
+import re
+
+
+def print_banner():
+    banner = """
+\033[32m
+
+
+\033[37m   ██╗ ██╗██████╗  █████╗ ██████╗  █████╗ ██╗    ██╗██████╗  █████╗ ██████╗ ██╗ ██╗
+\033[31m  ██╔╝██╔╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗██║    ██║██╔══██╗██╔══██╗██╔══██╗╚██╗╚██╗
+\033[32m ██╔╝██╔╝ ██║  ██║███████║██║  ██║███████║██║ █╗ ██║██████╔╝███████║██████╔╝ ╚██╗╚██╗
+\033[37m ╚██╗╚██╗ ██║  ██║██╔══██║██║  ██║██╔══██║██║███╗██║██╔══██╗██╔══██║██╔═══╝  ██╔╝██╔╝
+\033[31m  ╚██╗╚██╗██████╔╝██║  ██║██████╔╝██║  ██║╚███╔███╔╝██║  ██║██║  ██║██║     ██╔╝██╔╝
+   ╚═╝ ╚═╝╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═╝
+
+
+
+\033[0m"""
+    print(banner)
+
+    print(f"Welcome to NANOdadaWRAP")
+
+
+
+
+def write_config_yaml(input_dir, output_dir,  db_choice, rank, extension, sample_names, trimming, threads):
+    config = {
+        "input_dir": input_dir,
+        "output_dir": output_dir,
+        "tax_db": db_choice,
+        "rank": rank,
+        "script": "script",
+        "logs": "logs",
+        "file_extension": extension,
+        "sample_names": sample_names,
+        "threads": threads
+    }
+
+    if trimming != None: config["trimming_method"] = trimming
+
+    config_path = os.path.join(output_dir, "config.yaml")
+    with open(config_path, "w") as f:
+        yaml.dump(config, f)
+    #print(f"Config file written to {config_path}")
+    return config_path
+
+def run_snakemake(config_path,is_quiet=False):
+    args = ["snakemake", "--configfile", config_path, "--cores", "all", "--nolock", "--latency-wait", "8"]
+    if is_quiet: args += ["--quiet", "all"]
+    try:
+        subprocess.run(args, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running Snakemake with config file '{config_path}': {e}")
+        sys.exit(1)
+
+def main():
+    print_banner()
+
+    parser = argparse.ArgumentParser(description="Process raw sequencing files for downstream analysis.")
+    parser.add_argument("-i", "--input_directory", required=True, help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
+    parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "dadaWRAP"), help="Specify the output directory (default: ./NANOdadaWRAP_results)")
+    parser.add_argument("-tr", "--trimming", choices=["porechop", "porechop_abi"], default=None, required=False, help="Specify the method if you want to remove adapters")
+    parser.add_argument("-d", "--db_choice", choices=["rdp", "silva"], default="rdp", required=False, help="Specify the database choice for taxonomy assignment for EMU: dada2 or rdp (default: rdp)")
+    parser.add_argument("-r", "--rank",choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],default="species", help="Taxonomic rank for final output")
+    parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
+    parser.add_argument("-t", "--threads", default=os.cpu_count(), help="Number of threads")
+    try: args = parser.parse_args()
+    except SystemExit:
+        #parser.print_usage()
+        sys.exit(0)
+
+    input_dir = args.input_directory
+    output_dir = args.output_directory
+    is_quiet = args.quiet
+
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    file_patterns = [ "*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
+    files = [
+        file
+        for pattern in file_patterns
+        for file in glob.glob(os.path.join(input_dir, pattern))
+    ]
+
+    if not files:
+        print("No matching files found in the input directory.")
+        sys.exit(1)
+
+    sample_names = [os.path.splitext(os.path.basename(file))[0] for file in files]
+
+    extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
+
+    config_path = write_config_yaml(
+        input_dir, output_dir,  args.db_choice, args.rank, extension, sample_names, args.trimming,  args.threads
+    )
+    run_snakemake(config_path)
+
+if __name__ == "__main__":
+    main()

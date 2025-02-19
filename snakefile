@@ -1,0 +1,146 @@
+import os
+
+# Configura la directory di input e output
+input_dir = config["input_dir"]
+output_dir = config["output_dir"]
+sample_names = config["sample_names"]
+file_extension = config["file_extension"]
+trimming_method = config.get("trimming_method")
+tax_db = config["tax_db"]
+db_dir = config.get("db_dir",f"db_s/emu/{tax_db}")
+rank = config["rank"]
+cpus = config["threads"]
+
+def getNanofiltInput(wildcards):
+	if trimming_method == None: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
+	return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq"})
+
+rule all:
+    # Definisce i file di output finali richiesti
+    input:
+        # FastQC initial
+        expand(f"{config['output_dir']}/QC/raw_qc_initial/{{sample}}_fastqc.html", sample = sample_names),
+        f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
+        #Porechop
+        expand(f"{config['output_dir']}/intermediate/porechop/{{sample}}-porechop.fastq", sample=sample_names) if trimming_method != None else [],
+        #Fastqc post
+        expand(f"{config['output_dir']}/QC/raw_qc_post/{{sample}}-nanofilt_fastqc.html", sample=sample_names),
+        f"{config['output_dir']}/QC/raw_qc_post/multiqc_report.html",
+        f"{db_dir}",
+        expand("{db_dir}/{tax_file}",db_dir=db_dir,tax_file=["taxonomy.tsv","species_taxid.fasta"]),
+        expand(f"{config['output_dir']}/results/emu-combined-{rank}.tsv", rank = rank)
+
+
+rule fastqc_initial:
+    input:
+        f"{input_dir}/{{sample}}.{file_extension}"
+    output:
+        "{output_dir}/QC/raw_qc_initial/{sample}_fastqc.html"
+    shell:
+        """
+        mkdir -p {output_dir}/QC/raw_qc_initial
+        fastqc {input} -o $(dirname {output})  > /dev/null 2>&1
+        """
+
+rule multiqc_initial:
+    input: expand("{output_dir}/QC/raw_qc_initial/{sample}_fastqc.html",output_dir=output_dir,sample=sample_names)
+    output: f"{output_dir}/QC/raw_qc_initial/multiqc_report.html"
+    shell:
+        """
+        echo
+        echo multiqc $(dirname {output}) -o $(dirname {output})
+        echo
+        multiqc $(dirname {output}) -o $(dirname {output}) > /dev/null 2>&1
+        """
+
+rule porechop:
+    input:
+        f"{input_dir}/{{sample}}.{file_extension}"
+    output:
+        fq="{output_dir}/intermediate/porechop/{sample}-porechop.fastq"
+    shell:
+        f"""
+                 mkdir -p {output_dir}/intermediate/porechop
+                 {trimming_method} -i {{input}} -o {{output.fq}}
+        """    
+
+
+#Filtro per lunghezza con NanoFilt
+rule nanofilt:
+    input:
+        unpack(getNanofiltInput)
+    output:
+        fq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
+    shell:
+        """
+        mkdir -p {output_dir}/intermediate/nanofilt
+        cat {input.fq} | NanoFilt -l 1200 --maxlength 1800 > {output.fq}
+        """
+
+rule fastqc_post:
+    input:
+        trimmed_files = "{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
+    output:
+        fastqc = "{output_dir}/QC/raw_qc_post/{sample}-nanofilt_fastqc.html"
+    shell:
+        """
+        mkdir -p $(dirname {output})
+        fastqc {input.trimmed_files} -o $(dirname {output})  > /dev/null 2>&1
+        """
+
+rule multiqc_final:
+    input: expand("{output_dir}/QC/raw_qc_post/{sample}-nanofilt_fastqc.html",output_dir=output_dir,sample=sample_names)
+    output: "{output_dir}/QC/raw_qc_post/multiqc_report.html"
+    shell:
+        """
+        echo ###############################################
+        echo multiqc $(dirname {output}) -o $(dirname {output}) 
+        echo
+        multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1
+        
+        """
+
+rule emu_database:
+    output:
+        the_dir=directory(f"{db_dir}"),  # Directory target
+        taxonomy=f"{db_dir}/taxonomy.tsv",
+        taxids=f"{db_dir}/species_taxid.fasta"
+    shell:
+        f"""
+        mkdir -p {{output.the_dir}}  # Crea la cartella target
+        osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_dir}/{tax_db}.tar  # Scarica il file tar
+        tar -xvf {db_dir}/{tax_db}.tar -C {{output.the_dir}} > /dev/null 2>&1  # Estrai nella cartella specificata
+        """
+
+rule emu_abundance:
+    input: 
+        fastq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
+        db="db_s/emu/{tax_db}"
+    output:
+        table="{output_dir}/results/emu/{sample}_{tax_db}_rel-abundance.tsv",
+        distribution="{output_dir}/results/emu/{sample}_{tax_db}_read-assignment-distributions.tsv",
+    params:
+        type='map-ont'
+    threads: cpus
+    shell:
+        f"""
+        mkdir -p {{output_dir}}/results/emu
+        echo starting emuuuuuu
+        echo emu abundance {{input.fastq}} --output-dir {{output_dir}}/results/emu --db {{input.db}} --threads {cpus} 
+        emu abundance {{input.fastq}} --output-dir {{output_dir}}/results/emu --db {{input.db}} --threads {cpus} # > /dev/null 2>&1
+        echo finished EMUUUUUUUUUUUUUUUUUUUUU
+        """
+
+
+rule emu_compile:
+    input: 
+        table=expand(f"{output_dir}/results/emu/{{sample}}_{{tax_db}}_rel-abundance.tsv", sample=sample_names, tax_db=tax_db)
+    output:
+        table="{output_dir}/results/emu-combined-{rank}.tsv"
+    params:
+        rank=rank
+    shell:
+        f"""
+        echo "{{params.rank}}"
+        emu combine-outputs {output_dir}/results/emu/ {{params.rank}} > /dev/null 2>&1
+        """
