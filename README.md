@@ -76,6 +76,9 @@ For long-read 16S rRNA data from Nanopore sequencing, use:
 ampwrap nanopore -i input_directory -o output_directory
 ```
 
+Further implementations can be requested by opening a issue
+
+
 ## Troubleshooting
 If you encounter issues during installation or execution, check the following:
 - Ensure that Conda/Mamba is properly installed and activated.
