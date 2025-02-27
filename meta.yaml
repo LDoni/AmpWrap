@@ -1,0 +1,27 @@
+package:
+  name: ampwrap
+  version: "0.1"
+
+source:
+  git_url: https://github.com/LDoni/AmpWrap.git
+  git_rev: master  # Assicurati che il branch sia corretto
+
+build:
+  noarch: python
+  script: $PYTHON setup.py install  # Questo forza l'installazione dello script
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python
+
+test:
+  imports:
+    - ampwrap  # Sostituiscilo con il nome corretto del modulo Python
+
+about:
+  home: https://github.com/LDoni/AmpWrap
+  summary: "AmpWrap: un tool per il wrapping di pipeline amplicon"
+  license: "MIT"
