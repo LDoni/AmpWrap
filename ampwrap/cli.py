@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import subprocess
 import sys
@@ -14,40 +12,35 @@ if len(sys.argv) <= 1:
     print(usage)
     sys.exit(1)
 
-# Mappa i workflow agli ambienti Conda
-workflow_envs = {
-    "short": "AmpWraP-short",
-    "long": "AmpWraP-long"
-}
-
+# Mappa i workflow ai loro script
 workflows = {
-     "short": "AmpWrap_short",
-     "long": "AmpWrap_long"}
+    "short": "AmpWrap_short",
+    "long": "AmpWrap_long"
+}
 
 workflow = sys.argv[1]  # Primo argomento: workflow
 args = sys.argv[2:]  # Argomenti successivi
+print("AAAAAAAAAAAAAAAAAA")
 
 # Verifica se il workflow è valido
 if workflow not in workflows:
-    print(f"Error: Invalid command '{workflow}'. Choose 'short' or 'long'.")
+    print(f"❌ Errore: '{workflow}' non è un comando valido. Usa 'short' o 'long'.")
     sys.exit(1)
 
-env_name = workflow_envs[workflow]  # Ambiente Conda corrispondente
-
+# Percorso dello script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 script_path = os.path.join(script_dir, workflows[workflow])
 
 if not os.path.exists(script_path):
-    print(f"Error: Script '{script_path}' not found!")
+    print(f"❌ Errore: Script '{script_path}' non trovato!")
     sys.exit(1)
 
+# Esegue il workflow direttamente nell'ambiente attivo
+#command = f"{script_path} " + " ".join(args)
+command = [workflows[workflow]] + args
 
-# Costruisce il comando per eseguire il workflow nel suo ambiente Conda
-command = f"conda run -n {env_name} ./{workflows[workflow]} " + " ".join(args)
-
-# Esegue il comando
 try:
     subprocess.run(command, shell=True, check=True)
 except subprocess.CalledProcessError:
-    print(f"Error: Execution of '{workflow}' in Conda environment '{env_name}' failed.")
+    print(f"❌ Errore: Esecuzione di '{workflow}' fallita.")
     sys.exit(1)
