@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import subprocess
 import sys
 
@@ -32,6 +33,14 @@ if workflow not in workflows:
     sys.exit(1)
 
 env_name = workflow_envs[workflow]  # Ambiente Conda corrispondente
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+script_path = os.path.join(script_dir, workflows[workflow])
+
+if not os.path.exists(script_path):
+    print(f"Error: Script '{script_path}' not found!")
+    sys.exit(1)
+
 
 # Costruisce il comando per eseguire il workflow nel suo ambiente Conda
 command = f"conda run -n {env_name} ./{workflows[workflow]} " + " ".join(args)
