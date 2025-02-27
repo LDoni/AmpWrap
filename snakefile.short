@@ -2,7 +2,7 @@ import os
 import glob
 
 
-# Directory e parametri
+# Directories and parameters
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
 sample_tab = config["sample_tab"]
@@ -13,9 +13,9 @@ reverse_primer = config["reverse_primer"]
 amplicon_length = config["amplicon_length"]
 files = config["sample"]
 threads = config.get("threads",os.cpu_count())
-figaroname = {"IlluminaStandard":"illumina","FVieiraStandard":"fvieira"}[config["figaro_name"]]
+figaroname = "fvieira"
 
-# leggi sample_tab
+# Parse sample_tab
 def sampleInfos(sample_config):
         d = {}
         for i,l in enumerate(open(sample_config)):
@@ -31,9 +31,34 @@ sample_d = sampleInfos(sample_tab)
 samples = sample_d.keys()
 indices = [1,2]
 
-# Calcolo lunghezza dei primer
+# Compute primer lengths
 forward_primer_length = len(forward_primer)
 reverse_primer_length = len(reverse_primer)
+
+# Create SymLinks
+def rename_samples(samples):
+    # get sample names compatible for FVieira format
+    renamed_dict = {}
+    seen_names = set()
+    for sample in samples:
+        new_name = sample.replace("_", "-")  # Sostituisce "_" con "-"
+        base_name = new_name
+        counter = 1
+        while new_name in seen_names:
+            new_name = f"{base_name}-{counter}"
+            counter += 1
+        renamed_dict[sample] = new_name
+        seen_names.add(new_name)
+    return renamed_dict
+
+sample_renamed_dict = rename_samples(sample_d.keys()) 
+renamed_samples2files = {}
+for sample,infos in sample_d.items():
+    renamed_sample = sample_renamed_dict[sample]
+    renamed_samples2files[renamed_sample] = renamed_samples2files.get(renamed_sample,{})
+    for i in infos:
+        f,index = i[0],i[1]
+        renamed_samples2files[renamed_sample][index] = f
 
 # tax db
 assign_taxonomy_method = config["assign_taxonomy_method"]   
@@ -58,6 +83,8 @@ def getReadFilesDict(wildcards,d=sample_d):
 
 rule all:
     input:
+        # figaro input
+        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension)
         # FastQC initial
         expand(f"{config['output_dir']}/QC/raw_qc_initial/{{file}}_fastqc.html", file=files),
         f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
@@ -79,6 +106,14 @@ rule all:
         f"{config['output_dir']}/results/ASVs_taxonomy.tsv",
         f"{config['output_dir']}/results/read-count-tracking.tsv"
 
+
+rule input_symlink:
+    input: renamed_samples2files[renamed_sample][index]
+    output: f"{output_dir}/figaro_inp/{{sample}}_R{{index}}.{{extension}}"
+    run:
+        import os
+        src,target = os.path.abspath(input),os.path.abspath(output)
+        os.symlink(src, target)
 
 rule fastqc_initial:
     input:
@@ -146,7 +181,7 @@ rule multiqc_final:
 
 rule figaro:
     input:
-        input_dir= config["input_dir"]
+        input_dir=f"{output_dir}/figaro_inp"
     output:
         trimParameters= config["output_dir"] + "/intermediate/figaro/trimParameters.json"
     params:
