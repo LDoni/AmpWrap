@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import subprocess
 import sys
 
@@ -13,13 +15,13 @@ if len(sys.argv) <= 1:
 
 # Mappa i workflow agli ambienti Conda
 workflow_envs = {
-    "short": "dadaWRAP",
-    "long": "AmpWraP-nanopore"
+    "short": "AmpWraP-short",
+    "long": "AmpWraP-long"
 }
 
 workflows = {
-     "short": "dadaWRAPPE",
-     "long": "nanoDadaWRAPPE"}
+     "short": "AmpWrap_short",
+     "long": "AmpWrap_long"}
 
 workflow = sys.argv[1]  # Primo argomento: workflow
 args = sys.argv[2:]  # Argomenti successivi

@@ -1,0 +1,45 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+dada2_assign_taxonomy        1
+track_reads                  1
+total                        3
+
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 10:02:34 2025]
+rule track_reads:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv
+    jobid: 20
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv
+    resources: tmpdir=/tmp
+
+
+[Thu Feb 20 10:02:34 2025]
+rule dada2_assign_taxonomy:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds, db_s/dada2/silva_nr99_v138_train_set.fa.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs.fa, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_counts.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_taxonomy.tsv
+    jobid: 19
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_counts.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_taxonomy.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs.fa
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 10:02:37 2025]
+Error in rule track_reads:
+    jobid: 20
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv
+    shell:
+        
+        Rscript scripts/track_reads.R         /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/filter_summary.tsv /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada_fwd.rds         /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada_rev.rds /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Terminating processes on user request, this might take some time.

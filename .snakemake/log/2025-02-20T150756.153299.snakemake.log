@@ -1,0 +1,3 @@
+KeyError in file /media/shared1/alessiam/dadawrap/github/snakefile, line 6:
+'input_dir'
+  File "/media/shared1/alessiam/dadawrap/github/snakefile", line 6, in <module>

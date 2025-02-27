@@ -4,8 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 input <- args[1]
 output <- args[2]
 
-library(dada2)
-
+suppressPackageStartupMessages(library(dada2))
 # Carica i dati
 merged <- readRDS(input)
 

@@ -40,7 +40,6 @@ assign_taxonomy_method = config["assign_taxonomy_method"]
 out_name = config.get("db_name",
                 {
                     "dada2_silva_genus138": "silva_nr99_v138_train_set.fa.gz",
-                    "dada2_silva_species138": "silva_species_assignment_v138.fa.gz",
                     "dada2_RDP_genus19": "rdp_train_set_19.fa.gz",
                     "dada2_GG2_genus09": "gg_13_5_train_set.fa.gz",
                     "decipher_silva138": "SILVA_SSU_r138_2019.RData"
@@ -74,11 +73,11 @@ rule all:
         f"{config['output_dir']}/intermediate/merged_asvs.rds",
         f"{config['output_dir']}/intermediate/no_chimera_asvs.rds",
         f"{db_dir}/dada2/{out_name}",
-        f"{db_dir}/dada2/silva_species_assignment_v138.fa.gz" if species_db != "", 
+        #f"{db_dir}/dada2/silva_species_assignment_v138.fa.gz" if species_db != "", 
         f"{config['output_dir']}/results/ASVs.fa",
-        f"{config['output_dir']}/results/ASVs_counts.csv",
-        f"{config['output_dir']}/results/ASVs_taxonomy.csv",
-        f"{config['output_dir']}/results/read-count-tracking.csv"
+        f"{config['output_dir']}/results/ASVs_counts.tsv",
+        f"{config['output_dir']}/results/ASVs_taxonomy.tsv",
+        f"{config['output_dir']}/results/read-count-tracking.tsv"
 
 
 rule fastqc_initial:
@@ -174,7 +173,7 @@ rule dada2_filter:
     shell:
         """
         mkdir -p {output_dir}/intermediate/dada2_filtered
-        Rscript scripts/dada2_filter2.R \
+        Rscript scripts/dada2_filter.R \
         {output_dir}/intermediate/cutadapt {output_dir}/intermediate/dada2_filtered {input.figaro_params}
 
     touch {output.checkout}
@@ -233,9 +232,6 @@ rule download_dada2_db:
         elif [ "{params.method}" == "dada2_silva_genus138" ]; then
             DB_URL="https://zenodo.org/records/14169026/files/silva_nr99_v138.2_toGenus_trainset.fa.gz"
             DB_FILENAME="silva_nr99_v138.2_toGenus_trainset.fa.gz"
-        elif [ "{params.method}" == "dada2_silva_species138" ]; then
-            DB_URL="https://zenodo.org/records/14169026/files/silva_v138.2_assignSpecies.fa.gz"
-            DB_FILENAME="silva_v138.2_assignSpecies.fa.gz"
          elif [ "{params.method}" == "dada2_RDP_genus19" ]; then
             DB_URL="https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz"
             DB_FILENAME="rdp_19_toGenus_trainset.fa.gz"
@@ -249,7 +245,6 @@ rule download_dada2_db:
         echo "----------------------------------------------------------"
         echo "| decipher_silva138         | Silva         | 138       |"
         echo "| dada2_silva_genus138      | Silva         | 138       |"
-        echo "| dada2_silva_species138    | Silva         | 138       |"
         echo "| dada2_RDP_genus19         | RDP           | 19        |"
         echo "| dada2_GG2_genus09         | GreenGenes    | 09        |"
         echo "----------------------------------------------------------"
@@ -271,36 +266,34 @@ rule download_dada2_db:
 
 rule dada2_assign_taxonomy:
     input:
-        no_chimera_asvs= config["output_dir"] + "/results/no_chimera_asvs.rds",
+        no_chimera_asvs= config["output_dir"] + "/intermediate/no_chimera_asvs.rds",
         db=f"{db_dir}/dada2/{out_name}"
     output:
         asvs="{output_dir}/results/ASVs.fa",
-        asvs_counts="{output_dir}/results/ASVs_counts.csv",
-        taxonomy="{output_dir}/results/ASVs_taxonomy.csv",
+        asvs_counts="{output_dir}/results/ASVs_counts.tsv",
+        taxonomy="{output_dir}/results/ASVs_taxonomy.tsv",
     params:
         method=assign_taxonomy_method
     shell:
        """
        if [[ {params.method} == "decipher_silva138" ]]; then
            Rscript scripts/dada2_assign_taxonomy2.R {input.no_chimera_asvs} {input.db} {output_dir}/results
-       elif [[ {params.method} == "dada2_silva_species138" ]]; then
-           Rscript scripts/dada2_assign_taxonomy3.R {input.no_chimera_asvs} {input.db} {output_dir}/results
        elif [[ {params.method} == "dada2_silva_genus138" || {params.method} == "dada2_RDP_genus19" || {params.method} == "dada2_GG2_genus09" ]]; then
            Rscript scripts/dada2_assign_taxonomy.R {input.no_chimera_asvs} {input.db} {output_dir}/results
        else
-           echo "Error: method not valid. Choose among 'decipher_silva138', 'dada2_silva_genus138', 'dada2_silva_species138', 'dada2_RDP_genus19', or 'dada2_GG2_genus09'."
+           echo "Error: method not valid. Choose among 'decipher_silva138', 'dada2_silva_genus138', 'dada2_RDP_genus19', or 'dada2_GG2_genus09'."
            exit 1
        fi
        """
 rule track_reads:
     input:
-        merged_asvs=config["output_dir"] + "/results/merged_asvs.rds",
-        no_chimera_asvs=config["output_dir"] + "/results/no_chimera_asvs.rds"
+        merged_asvs=config["output_dir"] + "/intermediate/merged_asvs.rds",
+        no_chimera_asvs=config["output_dir"] + "/intermediate/no_chimera_asvs.rds"
     output:
-        track_reads=config["output_dir"] + "/results/read-count-tracking.csv"
+        track_reads=config["output_dir"] + "/results/read-count-tracking.tsv"
     shell:
         """
         Rscript scripts/track_reads.R \
-        {output_dir}/intermediate/dada2_filtered/filter_summary.csv {output_dir}/results/dada_fwd.rds \
-        {output_dir}/results/dada_rev.rds {input.merged_asvs} {input.no_chimera_asvs} {output.track_reads}
+        {output_dir}/intermediate/dada2_filtered/filter_summary.tsv {output_dir}/intermediate/dada_fwd.rds \
+        {output_dir}/intermediate/dada_rev.rds {input.merged_asvs} {input.no_chimera_asvs} {output.track_reads}
         """

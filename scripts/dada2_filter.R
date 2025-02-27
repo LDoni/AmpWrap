@@ -1,13 +1,14 @@
-
 args <- commandArgs(trailingOnly = TRUE)
 input_dir <- args[1]
 output_dir <- args[2]
 figaro_params <- args[3]
 
-library(dada2)
+suppressPackageStartupMessages(library(dada2))
+suppressPackageStartupMessages(library(jsonlite))
 
 # Leggi i parametri di Figaro
-figaro <- jsonlite::fromJSON(figaro_params)
+figaro <- fromJSON(figaro_params)
+
 truncLen <- as.numeric(figaro$trimPosition[[1]])
 maxEE <- as.numeric(figaro$maxExpectedError[[1]])
 
@@ -20,4 +21,7 @@ filt_fwd <- file.path(output_dir, basename(sub("_trimmed_R1.fq.gz", "_R1_filtere
 filt_rev <- file.path(output_dir, basename(sub("_trimmed_R2.fq.gz", "_R2_filtered.fq.gz", rev)))
 
 # Filtra e ritaglia
-filterAndTrim(fwd, filt_fwd, rev, filt_rev, truncLen = truncLen, maxEE = maxEE, multithread = TRUE)
+out <- filterAndTrim(fwd, filt_fwd, rev, filt_rev, truncLen = truncLen, maxEE = maxEE, multithread = TRUE)
+sample_names <- sub("^([^_]+).*", "\\1", basename(fwd))
+out_df <- data.frame(sample = sample_names, out)
+write.table(out_df, file.path(output_dir, "filter_summary.tsv"), row.names = FALSE, sep = "\t", quote = FALSE)

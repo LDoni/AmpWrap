@@ -17,7 +17,7 @@ taxa <- assignTaxonomy(seqtab_nochim, silva_db, multithread = TRUE)
 asv_seqs <- colnames(seqtab_nochim)
 #asv_headers <- paste0(">ASV_", seq_len(ncol(seqtab_nochim)))
 
-asv_headers <- vector(dim(seqtab.nochim)[2], mode = "character")
+asv_headers <- vector(dim(seqtab_nochim)[2], mode = "character")
 for (i in seq_along(asv_seqs)) {
   asv_headers[i] <- paste(">ASV", i, sep = "_")
 }
@@ -26,21 +26,26 @@ for (i in seq_along(asv_seqs)) {
 write(c(rbind(asv_headers, asv_seqs)), file.path(output_dir, "ASVs.fa"))
 
 # Salva conteggio ASVs
-
-asv_tab <- t(seqtab.nochim)
+asv_tab <- t(seqtab_nochim)
 row.names(asv_tab) <- sub(">", "", asv_headers)
-write.csv(asv_tab, file.path(output_dir, "ASVs_counts.csv"), row.names = TRUE, quote = FALSE)
+colnames(asv_tab) <- sapply(colnames(asv_tab), function(x) strsplit(x, "_")[[1]][1])
+write.table(asv_tab, file.path(output_dir, "ASVs_counts.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)
 
 # Salva tassonomia
+ranks <- c("domain", "phylum", "class", "order", "family", "genus")
 
-ranks <- c("domain", "phylum", "class", "order", "family", "genus", "species")
-asv_tax <- t(sapply(taxa, function(x) {
-  m <- match(ranks, x$rank)
-  taxaa <- x$taxon[m]
-  taxaa[startsWith(taxaa, "unclassified_")] <- NA
-  taxaa
-}))
+
+
+
+# Sostituisci "unclassified_" con NA
+asv_tax <- taxa
+asv_tax[startsWith(asv_tax, "unclassified_")] <- NA
+
+# Assicurati che le colonne abbiano i nomi corretti
 colnames(asv_tax) <- ranks
+
+# Assegna gli ASV come nomi delle righe
 rownames(asv_tax) <- gsub(pattern = ">", replacement = "", x = asv_headers)
 
-write.csv(asv_tax, file.path(output_dir, "ASVs_taxonomy.csv"), row.names = TRUE, quote = FALSE)
+# Salva la tabella della tassonomia
+write.table(asv_tax, file.path(output_dir, "ASVs_taxonomy.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)

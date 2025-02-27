@@ -109,7 +109,6 @@ def main():
     choices=[
         "decipher_silva138",
         "dada2_silva_genus138",
-        "dada2_silva_species138",
         "dada2_RDP_genus19",
         "dada2_GG2_genus09"],
     default="decipher_silva138",
@@ -118,7 +117,6 @@ def main():
         "Specify the database choice for taxonomy assignment: "
         "'decipher_silva138' (DECIPHER with SILVA 138), "
         "'dada2_silva_genus138' (DADA2 with SILVA 138, genus level), "
-        "'dada2_silva_species138' (DADA2 with SILVA 138, species level), "
         "'dada2_RDP_genus19' (DADA2 with RDP, genus level), "
         "'dada2_GG2_genus09' (DADA2 with GreenGenes 09, genus level). "
         "Default: 'decipher_silva138'."))   

@@ -6,7 +6,7 @@ err_fwd_file <- args[2]
 err_rev_file <- args[3]
 output <- args[4]
 
-library(dada2)
+suppressPackageStartupMessages(library(dada2))
 
 # Elenco dei file filtrati
 fwd <- list.files(input_dir, pattern = "_R1_filtered.fq.gz", full.names = TRUE)

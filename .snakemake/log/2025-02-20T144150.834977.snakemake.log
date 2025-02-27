@@ -1,0 +1,316 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+cutadapt                     2
+dada2_assign_taxonomy        1
+dada2_error_learning         1
+dada2_filter                 1
+dada2_infer_asvs             1
+dada2_remove_chimeras        1
+fastqc_initial               4
+fastqc_post_cutadapt         4
+figaro                       1
+multiqc_final                1
+multiqc_initial              1
+track_reads                  1
+total                       20
+
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:41:52 2025]
+rule cutadapt:
+    input: /media/shared1/alessiam/dadawrap/benchmark1/SRR20752596_R1.fastq.gz, /media/shared1/alessiam/dadawrap/benchmark1/SRR20752596_R2.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R2.fq.gz
+    log: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_cutadapt.log
+    jobid: 6
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R1.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, sample=SRR20752596
+    resources: tmpdir=/tmp
+
+
+[Thu Feb 20 14:41:52 2025]
+rule cutadapt:
+    input: /media/shared1/alessiam/dadawrap/benchmark1/SRR20752610_R2.fastq.gz, /media/shared1/alessiam/dadawrap/benchmark1/SRR20752610_R1.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R2.fq.gz
+    log: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_cutadapt.log
+    jobid: 7
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R2.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, sample=SRR20752610
+    resources: tmpdir=/tmp
+
+
+[Thu Feb 20 14:41:52 2025]
+rule figaro:
+    input: /media/shared1/alessiam/dadawrap/benchmark1
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/figaro/trimParameters.json
+    jobid: 13
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/figaro/trimParameters.json
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:41:52 2025]
+Finished job 7.
+1 of 20 steps (5%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:41:53 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R1.fq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R1_fastqc.html
+    jobid: 10
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R1_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R1.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, sample=SRR20752610, index=1
+    threads: 15
+    resources: tmpdir=/tmp
+
+
+[Thu Feb 20 14:41:53 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R2.fq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R2_fastqc.html
+    jobid: 11
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R2_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R2.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, sample=SRR20752610, index=2
+    threads: 15
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:41:53 2025]
+Finished job 6.
+2 of 20 steps (10%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+[Thu Feb 20 14:41:54 2025]
+Finished job 10.
+3 of 20 steps (15%) done
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:41:55 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R2.fq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R2_fastqc.html
+    jobid: 9
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R2_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R2.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, sample=SRR20752596, index=2
+    threads: 15
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:41:55 2025]
+Finished job 11.
+4 of 20 steps (20%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:41:56 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R1.fq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R1_fastqc.html
+    jobid: 8
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R1_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R1.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, sample=SRR20752596, index=1
+    threads: 15
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:41:57 2025]
+Finished job 9.
+5 of 20 steps (25%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+[Thu Feb 20 14:41:59 2025]
+Finished job 8.
+6 of 20 steps (30%) done
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+[Thu Feb 20 14:42:37 2025]
+Finished job 13.
+7 of 20 steps (35%) done
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:42:38 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/benchmark1/SRR20752596_R2.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R2_fastqc.html
+    jobid: 4
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R2_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, file=SRR20752596_R2
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:42:40 2025]
+Finished job 4.
+8 of 20 steps (40%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:42:41 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/benchmark1/SRR20752596_R1.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R1_fastqc.html
+    jobid: 1
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R1_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, file=SRR20752596_R1
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:42:43 2025]
+Finished job 1.
+9 of 20 steps (45%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:42:44 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/benchmark1/SRR20752610_R2.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R2_fastqc.html
+    jobid: 2
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R2_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, file=SRR20752610_R2
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:42:46 2025]
+Finished job 2.
+10 of 20 steps (50%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:42:47 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/benchmark1/SRR20752610_R1.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R1_fastqc.html
+    jobid: 3
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R1_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species, file=SRR20752610_R1
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:42:49 2025]
+Finished job 3.
+11 of 20 steps (55%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:42:50 2025]
+rule multiqc_initial:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R2_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/multiqc_report.html
+    jobid: 5
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/multiqc_report.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R2_fastqc.html
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:42:51 2025]
+Finished job 5.
+12 of 20 steps (60%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:42:52 2025]
+rule multiqc_final:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R2_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/multiqc_report.html
+    jobid: 12
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/multiqc_report.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R1_fastqc.html
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:42:53 2025]
+Finished job 12.
+13 of 20 steps (65%) done
+Select jobs to execute...
+
+[Thu Feb 20 14:42:53 2025]
+rule dada2_filter:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/figaro/trimParameters.json
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/checkout.filter
+    jobid: 14
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/checkout.filter; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/figaro/trimParameters.json
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:43:02 2025]
+Finished job 14.
+14 of 20 steps (70%) done
+Select jobs to execute...
+
+[Thu Feb 20 14:43:02 2025]
+rule dada2_error_learning:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/checkout.filter
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_forward_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_reverse_reads.rds
+    jobid: 15
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_forward_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_reverse_reads.rds; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/checkout.filter
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:43:40 2025]
+Finished job 15.
+15 of 20 steps (75%) done
+Select jobs to execute...
+
+[Thu Feb 20 14:43:40 2025]
+rule dada2_infer_asvs:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_forward_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_reverse_reads.rds
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds
+    jobid: 16
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_forward_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_reverse_reads.rds
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:43:55 2025]
+Finished job 16.
+16 of 20 steps (80%) done
+Select jobs to execute...
+
+[Thu Feb 20 14:43:55 2025]
+rule dada2_remove_chimeras:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds
+    jobid: 17
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:44:01 2025]
+Finished job 17.
+17 of 20 steps (85%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Thu Feb 20 14:44:02 2025]
+rule track_reads:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv
+    jobid: 20
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds
+    resources: tmpdir=/tmp
+
+
+[Thu Feb 20 14:44:02 2025]
+rule dada2_assign_taxonomy:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds, db_s/dada2/silva_nr99_v138_train_set.fa.gz
+    output: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs.fa, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_counts.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_taxonomy.tsv
+    jobid: 19
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs.fa, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_taxonomy.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_counts.tsv; Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/benchmark_illu_species
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:44:05 2025]
+Finished job 20.
+18 of 20 steps (90%) done
+[Thu Feb 20 14:44:58 2025]
+Finished job 19.
+19 of 20 steps (95%) done
+Select jobs to execute...
+
+[Thu Feb 20 14:44:58 2025]
+localrule all:
+    input: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/multiqc_report.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/multiqc_report.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/figaro/trimParameters.json, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_forward_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_reverse_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds, db_s/dada2/silva_nr99_v138_train_set.fa.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs.fa, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_counts.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_taxonomy.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv
+    jobid: 0
+    reason: Input files updated by another job: /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/read-count-tracking.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_taxonomy.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/merged_asvs.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_forward_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752596_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs.fa, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752610_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/multiqc_report.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/SRR20752596_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/figaro/trimParameters.json, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/no_chimera_asvs.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752596_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752596_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_filtered/SRR20752610_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/cutadapt/SRR20752610_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/benchmark_illu_species/intermediate/dada2_error_learning/err_reverse_reads.rds, /media/shared1/alessiam/dadawrap/benchmark_illu_species/results/ASVs_counts.tsv, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_post_cutadapt/SRR20752610_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/benchmark_illu_species/QC/raw_qc_initial/multiqc_report.html
+    resources: tmpdir=/tmp
+
+[Thu Feb 20 14:44:58 2025]
+Finished job 0.
+20 of 20 steps (100%) done
+Complete log: .snakemake/log/2025-02-20T144150.834977.snakemake.log
