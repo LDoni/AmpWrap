@@ -79,7 +79,7 @@ ampwrap nanopore -i input_directory -o output_directory
 
 Further implementations can be requested by opening a issue
 
-## 🐍 Illumina Workflow
+## Illumina Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
 2. Primer removal from sequencing reads with [Cutadapt](https://github.com/marcelm/cutadapt).
        The *--discard-untrimmed* option is applied
@@ -87,7 +87,7 @@ Further implementations can be requested by opening a issue
 4. Determine optimal trimming parameters for DADA2 with [Figaro](https://github.com/Zymo-Research/figaro)
 5. Amplicon sequence variant inference with [DADA2](https://github.com/benjjneb/dada2)
 
-## 🐍 Nanopore Workflow
+## Nanopore Workflow
 1.
 
 ## Troubleshooting
