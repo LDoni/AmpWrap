@@ -12,6 +12,7 @@
 - [Usage](#usage)
   - [AmpWrap for Short Reads (Illumina)](#ampwrap-for-short-reads-illumina)
   - [AmpWrap for Long Reads (Nanopore)](#ampwrap-for-long-reads-nanopore)
+- [Illumina Workflow](#illumina-workflow)
 - [Troubleshooting](#troubleshooting)
 
 ## Introduction
@@ -85,6 +86,9 @@ Further implementations can be requested by opening a issue
 3. Post-cutadapt quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
 4. Determine optimal trimming parameters for DADA2 with [Figaro](https://github.com/Zymo-Research/figaro)
 5. Amplicon sequence variant inference with [DADA2](https://github.com/benjjneb/dada2)
+
+## 🐍 Nanopore Workflow
+1.
 
 ## Troubleshooting
 If you encounter issues during installation or execution, check the following:
