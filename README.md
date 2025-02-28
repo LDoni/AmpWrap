@@ -12,7 +12,9 @@
 - [Usage](#usage)
   - [AmpWrap for Short Reads (Illumina)](#ampwrap-for-short-reads-illumina)
   - [AmpWrap for Long Reads (Nanopore)](#ampwrap-for-long-reads-nanopore)
-- [Illumina Workflow](#illumina-workflow)
+-[Workflow](#workflow)
+  - [Illumina](#illumina-workflow)
+  - [Nanopore](#nanopore-workflow)
 - [Troubleshooting](#troubleshooting)
 
 ## Introduction
