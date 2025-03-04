@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+
 import os
 import subprocess
 import sys
@@ -14,13 +17,12 @@ if len(sys.argv) <= 1:
 
 # Mappa i workflow ai loro script
 workflows = {
-    "short": "AmpWrap_short",
-    "long": "AmpWrap_long"
+    "short": "./AmpWrap_short",
+    "long": "./AmpWrap_long"
 }
 
 workflow = sys.argv[1]  # Primo argomento: workflow
 args = sys.argv[2:]  # Argomenti successivi
-print("AAAAAAAAAAAAAAAAAA")
 
 # Verifica se il workflow è valido
 if workflow not in workflows:
@@ -37,10 +39,14 @@ if not os.path.exists(script_path):
 
 # Esegue il workflow direttamente nell'ambiente attivo
 #command = f"{script_path} " + " ".join(args)
-command = [workflows[workflow]] + args
+#command = [workflows[workflow]] + args
+command = [script_path] + args
+
+
 
 try:
-    subprocess.run(command, shell=True, check=True)
+    #subprocess.run(command, shell=True, check=True)
+    subprocess.run(command, check=True)
 except subprocess.CalledProcessError:
     print(f"❌ Errore: Esecuzione di '{workflow}' fallita.")
     sys.exit(1)

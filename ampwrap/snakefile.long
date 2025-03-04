@@ -1,6 +1,7 @@
 import os
+from datetime import datetime
 
-# Configura la directory di input e output
+# Configure input output directories
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
 sample_names = config["sample_names"]
@@ -10,10 +11,54 @@ tax_db = config["tax_db"]
 db_dir = config.get("db_dir",f"db_s/emu/{tax_db}")
 rank = config["rank"]
 cpus = config["threads"]
+to_cutadapt = config.get("to_cutadapt",False)
 
-def getNanofiltInput(wildcards):
+
+def getCutAdaptInput(wildcards):
 	if trimming_method == None: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
-	return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq"})
+	return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq.gz"})
+
+def getNanoFiltInput(wildcards):
+        if to_cutadapt == True: return({"fq":f"{output_dir}/intermediate/cutadapt/{wildcards.sample}_cutadapt.fq.gz"})
+        else:
+            if trimming_method != None: return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq.gz"})
+            else: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
+
+# nanofilt parameters
+nl_min_len = config.get("nl_min_len",1200)
+nl_max_len = config.get("nl_max_len",1800)
+nl_min_qual = config.get("nl_min_qual",10)
+
+# emu parametesrs
+
+emu_min_ab = config.get("emu_min_ab", 0.0001)
+
+
+
+# rev compl primers
+def reverse_complement(seq):
+    from Bio.Seq import Seq
+    seq = Seq(seq)
+    return seq.reverse_complement()
+
+
+RC_FWD = reverse_complement(FORWARD_PRIMER)
+RC_RVS = reverse_complement(REVERSE_PRIMER)
+
+#print("Reverse Complement Forward Primer:", REVERSE_COMP_FORWARD_PRIMER)
+#print("Reverse Complement Reverse Primer:", REVERSE_COMP_REVERSE_PRIMER)
+
+
+
+# Generate timestamp
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+
+with open(ampwrap_log.txt, "w") as f:
+    f.write(f"AmpWrap started at:  {timestamp}\n")
+
+
+
 
 rule all:
     # Definisce i file di output finali richiesti
@@ -22,7 +67,10 @@ rule all:
         expand(f"{config['output_dir']}/QC/raw_qc_initial/{{sample}}_fastqc.html", sample = sample_names),
         f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
         #Porechop
-        expand(f"{config['output_dir']}/intermediate/porechop/{{sample}}-porechop.fastq", sample=sample_names) if trimming_method != None else [],
+        expand(f"{config['output_dir']}/intermediate/porechop/{{sample}}-porechop.fastq.gz", sample=sample_names) if trimming_method != None else [],
+        #Cutadapt
+        expand(f"{config['output_dir']}/intermediate/cutadapt/{{sample}}_cutadapt.fq.gz", sample=sample_names) if to_cutadapt else [],
+        f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
         #Fastqc post
         expand(f"{config['output_dir']}/QC/raw_qc_post/{{sample}}-nanofilt_fastqc.html", sample=sample_names),
         f"{config['output_dir']}/QC/raw_qc_post/multiqc_report.html",
@@ -57,7 +105,7 @@ rule porechop:
     input:
         f"{input_dir}/{{sample}}.{file_extension}"
     output:
-        fq="{output_dir}/intermediate/porechop/{sample}-porechop.fastq"
+        fq="{output_dir}/intermediate/porechop/{sample}-porechop.fastq.gz"
     shell:
         f"""
                  mkdir -p {output_dir}/intermediate/porechop
@@ -65,16 +113,51 @@ rule porechop:
         """    
 
 
+rule cutadapt_primers:
+    input: unpack(getCutAdaptInput)
+    output:
+        r1_trimmed = "{output_dir}/intermediate/cutadapt/{sample}_cutadapt.fq.gz",
+    log:
+        "{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log"
+    params:
+        forward_primer = forward_primer,
+        reverse_primer = reverse_primer,
+        RC_RVS = RC_RVS,
+
+    shell:
+      """
+      mkdir -p {output_dir}/intermediate/cutadapt
+      cutadapt -e 0.2 -O 15 --revcomp -o {output.r1_trimmed} -a {params.forward_primer}...{params.RC_RVS} {input.fq} > {log} 
+      """
+
+
+rule combine_cutadapt_logs:
+    input: expand("{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log", output_dir=output_dir, sample=samples)
+    output: f"{output_dir}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
+    shell:
+         f"""
+        cat {{input}} > {{output}}
+        echo -e "sample\treads retained\tbps retained"
+        paste <(echo {samples} | tr " " "\n") <(grep "passing" cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") <(grep "filtered" cutadapt_primer_trimming_stats.txt | cut>
+        mv {{input}} f"{output_dir}/QC/raw_qc_post_cutadapt/"
+       
+          """
+
+
+
+
+
+
 #Filtro per lunghezza con NanoFilt
 rule nanofilt:
     input:
-        unpack(getNanofiltInput)
+        unpack(getNanoFiltInput)
     output:
         fq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
     shell:
-        """
-        mkdir -p {output_dir}/intermediate/nanofilt
-        cat {input.fq} | NanoFilt -l 1200 --maxlength 1800 > {output.fq}
+        f"""
+        mkdir -p {{output_dir}}/intermediate/nanofilt
+        cat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {output.fq}
         """
 
 rule fastqc_post:
@@ -127,7 +210,7 @@ rule emu_abundance:
         mkdir -p {{output_dir}}/results/emu
         echo starting emuuuuuu
         echo emu abundance {{input.fastq}} --output-dir {{output_dir}}/results/emu --db {{input.db}} --threads {cpus} 
-        emu abundance {{input.fastq}} --output-dir {{output_dir}}/results/emu --db {{input.db}} --threads {cpus} # > /dev/null 2>&1
+        emu abundance {{input.fastq}} --output-dir {{output_dir}}/results/emu --db {{input.db}} --threads {cpus} --min-abundance {emu_min_ab} # > /dev/null 2>&1
         echo finished EMUUUUUUUUUUUUUUUUUUUUU
         """
 

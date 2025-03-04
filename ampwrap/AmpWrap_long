@@ -9,29 +9,41 @@ import subprocess
 import re
 
 
+
+
 def print_banner():
     banner = """
-\033[32m
+
+ █████╗ ███╗   ███╗██████╗                                                                  ██╗   
+██╔══██╗████╗ ████║██╔══██╗                                                                 ╚██╗  
+███████║██╔████╔██║██████╔╝█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗╚██╗ 
+██╔══██║██║╚██╔╝██║██╔═══╝ ╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝██╔╝ 
+██║  ██║██║ ╚═╝ ██║██║                                                                      ██╔╝  
+╚═╝  ╚═╝╚═╝     ╚═╝╚═╝                                                                      ╚═╝   
+                                                                                                  
+  ██╗                                                           ██╗    ██╗██████╗  █████╗ ██████╗ 
+ ██╔╝                                                           ██║    ██║██╔══██╗██╔══██╗██╔══██╗
+██╔╝█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗██║ █╗ ██║██████╔╝███████║██████╔╝
+╚██╗╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝██║███╗██║██╔══██╗██╔══██║██╔═══╝ 
+ ╚██╗                                                           ╚███╔███╔╝██║  ██║██║  ██║██║     
+  ╚═╝                                                            ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     
+                                                                                                  
 
 
-\033[37m   ██╗ ██╗██████╗  █████╗ ██████╗  █████╗ ██╗    ██╗██████╗  █████╗ ██████╗ ██╗ ██╗
-\033[31m  ██╔╝██╔╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗██║    ██║██╔══██╗██╔══██╗██╔══██╗╚██╗╚██╗
-\033[32m ██╔╝██╔╝ ██║  ██║███████║██║  ██║███████║██║ █╗ ██║██████╔╝███████║██████╔╝ ╚██╗╚██╗
-\033[37m ╚██╗╚██╗ ██║  ██║██╔══██║██║  ██║██╔══██║██║███╗██║██╔══██╗██╔══██║██╔═══╝  ██╔╝██╔╝
-\033[31m  ╚██╗╚██╗██████╔╝██║  ██║██████╔╝██║  ██║╚███╔███╔╝██║  ██║██║  ██║██║     ██╔╝██╔╝
-   ╚═╝ ╚═╝╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═╝
 
-
-
-\033[0m"""
+"""
     print(banner)
 
-    print(f"Welcome to NANOdadaWRAP")
+    print(f"Welcome to AMP_WRAP")
 
 
 
 
-def write_config_yaml(input_dir, output_dir,  db_choice, rank, extension, sample_names, trimming, threads):
+
+
+
+
+def write_config_yaml(input_dir, output_dir, db_choice, rank, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -41,7 +53,11 @@ def write_config_yaml(input_dir, output_dir,  db_choice, rank, extension, sample
         "logs": "logs",
         "file_extension": extension,
         "sample_names": sample_names,
-        "threads": threads
+        "threads": threads,
+        "nl_min_len": nl_min_len,
+	"nl_max_len": nl_max_len,
+	"nl_min_qual": nl_min_qual,
+	"emu_min_ab": emu_min_ab
     }
 
     if trimming != None: config["trimming_method"] = trimming
@@ -65,13 +81,19 @@ def main():
     print_banner()
 
     parser = argparse.ArgumentParser(description="Process raw sequencing files for downstream analysis.")
-    parser.add_argument("-i", "--input_directory", required=True, help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
-    parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "dadaWRAP"), help="Specify the output directory (default: ./NANOdadaWRAP_results)")
+    parser.add_argument("-i", "--input-directory", required=True, help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
+    parser.add_argument("-o", "--output-directory", default=os.path.join(os.getcwd(), "dadaWRAP"), help="Specify the output directory (default: ./NANOdadaWRAP_results)")
     parser.add_argument("-tr", "--trimming", choices=["porechop", "porechop_abi"], default=None, required=False, help="Specify the method if you want to remove adapters")
-    parser.add_argument("-d", "--db_choice", choices=["rdp", "silva"], default="rdp", required=False, help="Specify the database choice for taxonomy assignment for EMU: dada2 or rdp (default: rdp)")
+    parser.add_argument("-d", "--db-choice", choices=["rdp", "silva"], default="rdp", required=False, help="Specify the database choice for taxonomy assignment for EMU: dada2 or rdp (default: rdp)")
     parser.add_argument("-r", "--rank",choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],default="species", help="Taxonomic rank for final output")
     parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
     parser.add_argument("-t", "--threads", default=os.cpu_count(), help="Number of threads")
+    parser.add_argument("--nl-min-len",default=1200,help="Filter on a minimum read length")
+    parser.add_argument("--nl-max-len",default=1800,help="Filter on a maximum read length")
+    parser.add_argument("--nl-min-qual",default=8,help="Filter on a minimum average read quality score")
+    parser.add_argument("--emu-min-ab",default=0.0001,help="Filter species with relative abundance below threshold; .01 = 1%")
+
+
     try: args = parser.parse_args()
     except SystemExit:
         #parser.print_usage()
@@ -79,6 +101,10 @@ def main():
 
     input_dir = args.input_directory
     output_dir = args.output_directory
+    nl_min_len = args.nl_min_len
+    nl_max_len = args.nl_max_len
+    nl_min_qual = args.nl_min_qual
+    emu_min_ab = args.emu_min_ab
     is_quiet = args.quiet
 
     # Create output directory if it doesn't exist
@@ -100,7 +126,7 @@ def main():
     extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
 
     config_path = write_config_yaml(
-        input_dir, output_dir,  args.db_choice, args.rank, extension, sample_names, args.trimming,  args.threads
+        input_dir, output_dir,  args.db-choice, args.rank, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab
     )
     run_snakemake(config_path)
 
