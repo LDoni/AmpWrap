@@ -92,8 +92,7 @@ Further implementations can be requested by opening a issue
 ## Nanopore Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
 2. Primer removal with [Porechop](https://github.com/rrwick/Porechop). The use of **Porechop** for trimming is optional
-
-   and depends on the `trimming_method` parameter in the config file.
+and depends on the `trimming_method` parameter in the config file.
 3. Filtering reads by length with [NanoFilt](https://github.com/wdecoster/nanofilt)
 4. Post-filtering quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
 5. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
