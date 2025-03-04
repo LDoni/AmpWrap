@@ -90,7 +90,11 @@ Further implementations can be requested by opening a issue
 5. Amplicon sequence variant inference with [DADA2](https://github.com/benjjneb/dada2)
 
 ## Nanopore Workflow
-1.
+1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
+2. Primer removal with [Porechop](https://github.com/rrwick/Porechop)
+3. Filtering reads by length with [NanoFilt](https://github.com/wdecoster/nanofilt)
+4. Post-filtering quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
+5. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
 
 ## Troubleshooting
 If you encounter issues during installation or execution, check the following:
