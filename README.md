@@ -71,6 +71,7 @@ Basic usage:
 ```sh
 ampwrap illumina -i input_directory -a forward_primer -A reverse_primer -l amplicon_length
 ```
+PS: Don't use it on multiple sequencing runs. If you want to analyze different runs, it's better to merge the DADA2 outputs after DADA2.
 
 ### AmpWrap for Long Reads (Nanopore)
 For long-read 16S rRNA data from Nanopore sequencing, use:
