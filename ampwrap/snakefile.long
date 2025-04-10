@@ -10,9 +10,17 @@ trimming_method = config.get("trimming_method")
 tax_db = config["tax_db"]
 db_dir = config.get("db_dir",f"db_s/emu/{tax_db}")
 rank = config["rank"]
-cpus = config["threads"]
-to_cutadapt = config.get("to_cutadapt",False)
+cpus = int(config["threads"])
+#to_cutadapt = all(p in config and config[p] not in [None, ""] for p in ["forward_primer", "reverse_primer"])
 
+to_cutadapt = all(
+    p in config and config[p] not in [None, "", "null", "None"]
+    for p in ["forward_primer", "reverse_primer"]
+)
+
+
+forward_primer = config.get("forward_primer")
+reverse_primer = config.get("reverse_primer")
 
 def getCutAdaptInput(wildcards):
 	if trimming_method == None: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
@@ -33,51 +41,60 @@ nl_min_qual = config.get("nl_min_qual",10)
 
 emu_min_ab = config.get("emu_min_ab", 0.0001)
 
-
-
-# rev compl primers
 def reverse_complement(seq):
+    if seq is None:
+        return None
     from Bio.Seq import Seq
     seq = Seq(seq)
     return seq.reverse_complement()
 
-
-RC_FWD = reverse_complement(FORWARD_PRIMER)
-RC_RVS = reverse_complement(REVERSE_PRIMER)
-
-#print("Reverse Complement Forward Primer:", REVERSE_COMP_FORWARD_PRIMER)
-#print("Reverse Complement Reverse Primer:", REVERSE_COMP_REVERSE_PRIMER)
+RC_FWD = reverse_complement(forward_primer) if forward_primer else None
+RC_RVS = reverse_complement(reverse_primer) if reverse_primer else None
 
 
 
-# Generate timestamp
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-
-with open(ampwrap_log.txt, "w") as f:
-    f.write(f"AmpWrap started at:  {timestamp}\n")
-
-
+start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+print(start_time)
 
 
 rule all:
-    # Definisce i file di output finali richiesti
     input:
-        # FastQC initial
+        # QC initial
         expand(f"{config['output_dir']}/QC/raw_qc_initial/{{sample}}_fastqc.html", sample = sample_names),
-        f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
+        f"{config['output_dir']}/QC/raw_qc_initial/readcount/raw_reads_counts.txt",
+        f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",       
         #Porechop
         expand(f"{config['output_dir']}/intermediate/porechop/{{sample}}-porechop.fastq.gz", sample=sample_names) if trimming_method != None else [],
         #Cutadapt
         expand(f"{config['output_dir']}/intermediate/cutadapt/{{sample}}_cutadapt.fq.gz", sample=sample_names) if to_cutadapt else [],
-        f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
-        #Fastqc post
+        f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt" if to_cutadapt else [],
+        #Qc post
         expand(f"{config['output_dir']}/QC/raw_qc_post/{{sample}}-nanofilt_fastqc.html", sample=sample_names),
         f"{config['output_dir']}/QC/raw_qc_post/multiqc_report.html",
+        f"{config['output_dir']}/QC/raw_qc_post/readcount/filtered_reads_counts.txt",
+        #emuDB
         f"{db_dir}",
         expand("{db_dir}/{tax_file}",db_dir=db_dir,tax_file=["taxonomy.tsv","species_taxid.fasta"]),
-        expand(f"{config['output_dir']}/results/emu-combined-{rank}.tsv", rank = rank)
+        #emu
+        expand(f"{output_dir}/results/emu/{{sample}}-nanofilt_rel-abundance.tsv", sample=sample_names),
+        #final report
+        f"{config['output_dir']}/results/final_report.txt"
 
+
+rule seqkit_stats_pre_qc:
+    input:
+        expand("{input_dir}/{sample}.{file_extension}",
+               input_dir=input_dir,
+               sample=sample_names,
+               file_extension=file_extension)
+    output:
+        "{output_dir}/QC/raw_qc_initial/readcount/raw_reads_counts.txt"
+    shell:
+        """
+        mkdir -p $(dirname {output})
+        seqkit stats -T -j {threads} {input_dir}/*.{file_extension} > {output}
+        """
 
 rule fastqc_initial:
     input:
@@ -95,9 +112,6 @@ rule multiqc_initial:
     output: f"{output_dir}/QC/raw_qc_initial/multiqc_report.html"
     shell:
         """
-        echo
-        echo multiqc $(dirname {output}) -o $(dirname {output})
-        echo
         multiqc $(dirname {output}) -o $(dirname {output}) > /dev/null 2>&1
         """
 
@@ -106,11 +120,18 @@ rule porechop:
         f"{input_dir}/{{sample}}.{file_extension}"
     output:
         fq="{output_dir}/intermediate/porechop/{sample}-porechop.fastq.gz"
-    shell:
-        f"""
-                 mkdir -p {output_dir}/intermediate/porechop
-                 {trimming_method} -i {{input}} -o {{output.fq}}
-        """    
+    run:
+        if trimming_method == "porechop_abi":
+            cmd = f"porechop_abi -abi -i {input} -o {output.fq}"
+        elif trimming_method == "porechop":
+            cmd = f"porechop -i {input} -o {output.fq}"
+        else:
+            raise ValueError(f"Unsupported trimming_method: {trimming_method}")
+        
+        shell(f"""
+            mkdir -p {output_dir}/intermediate/porechop
+            {cmd} > /dev/null 2>&1
+        """)
 
 
 rule cutadapt_primers:
@@ -132,23 +153,19 @@ rule cutadapt_primers:
 
 
 rule combine_cutadapt_logs:
-    input: expand("{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log", output_dir=output_dir, sample=samples)
+    input: expand("{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log", output_dir=output_dir, sample=sample_names)
     output: f"{output_dir}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
+    log: f"{output_dir}/intermediate/cutadapt/combined_cutadapt.log"
     shell:
          f"""
         cat {{input}} > {{output}}
-        echo -e "sample\treads retained\tbps retained"
-        paste <(echo {samples} | tr " " "\n") <(grep "passing" cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") <(grep "filtered" cutadapt_primer_trimming_stats.txt | cut>
-        mv {{input}} f"{output_dir}/QC/raw_qc_post_cutadapt/"
-       
+        echo -e "sample\treads retained\tbps retained" > {{log}}
+        paste <(echo {" ".join(list(sample_names))} | tr " " "\n") <(grep "passing" {{output}} | cut -f3 -d "(" | tr -d ")") <(grep "filtered" {{output}} | cut -f3 -d "(" | tr -d ")") >> {{log}}
+        cat {{log}}
+        mkdir -p "{output_dir}/QC/raw_qc_post/"
+        mv {{input}} "{output_dir}/QC/raw_qc_post/"
           """
 
-
-
-
-
-
-#Filtro per lunghezza con NanoFilt
 rule nanofilt:
     input:
         unpack(getNanoFiltInput)
@@ -157,7 +174,11 @@ rule nanofilt:
     shell:
         f"""
         mkdir -p {{output_dir}}/intermediate/nanofilt
-        cat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {output.fq}
+        if [[ "{{input.fq}}" == *.gz ]]; then
+            zcat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {{output.fq}}
+        else
+            cat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {{output.fq}}
+        fi
         """
 
 rule fastqc_post:
@@ -171,16 +192,25 @@ rule fastqc_post:
         fastqc {input.trimmed_files} -o $(dirname {output})  > /dev/null 2>&1
         """
 
-rule multiqc_final:
+rule multiqc_post:
     input: expand("{output_dir}/QC/raw_qc_post/{sample}-nanofilt_fastqc.html",output_dir=output_dir,sample=sample_names)
     output: "{output_dir}/QC/raw_qc_post/multiqc_report.html"
     shell:
         """
-        echo ###############################################
-        echo multiqc $(dirname {output}) -o $(dirname {output}) 
-        echo
-        multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1
-        
+        multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1        
+        """
+
+rule seqkit_stats_post_qc:
+    input:
+        expand("{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
+               output_dir=output_dir,
+               sample=sample_names)
+    output:
+        "{output_dir}/QC/raw_qc_post/readcount/filtered_reads_counts.txt"
+    shell:
+        """
+        mkdir -p $(dirname {output})
+        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-nanofilt.fastq > {output}
         """
 
 rule emu_database:
@@ -191,39 +221,53 @@ rule emu_database:
     shell:
         f"""
         mkdir -p {{output.the_dir}}  # Crea la cartella target
-        osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_dir}/{tax_db}.tar  # Scarica il file tar
-        tar -xvf {db_dir}/{tax_db}.tar -C {{output.the_dir}} > /dev/null 2>&1  # Estrai nella cartella specificata
+        osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_dir}/{tax_db}.tar  
+        tar -xvf {db_dir}/{tax_db}.tar -C {{output.the_dir}} > /dev/null 2>&1  
         """
 
 rule emu_abundance:
     input: 
         fastq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
-        db="db_s/emu/{tax_db}"
+        db=lambda wildcards: f"db_s/emu/{config['tax_db']}" # "db_s/emu/{tax_db}"
     output:
-        table="{output_dir}/results/emu/{sample}_{tax_db}_rel-abundance.tsv",
-        distribution="{output_dir}/results/emu/{sample}_{tax_db}_read-assignment-distributions.tsv",
+        "{output_dir}/results/emu/{sample}-nanofilt_rel-abundance.tsv",
     params:
-        type='map-ont'
-    threads: cpus
+        type='map-ont',
+        min_ab=emu_min_ab
+    threads:
+        cpus
     shell:
-        f"""
-        mkdir -p {{output_dir}}/results/emu
-        echo starting emuuuuuu
-        echo emu abundance {{input.fastq}} --output-dir {{output_dir}}/results/emu --db {{input.db}} --threads {cpus} 
-        emu abundance {{input.fastq}} --output-dir {{output_dir}}/results/emu --db {{input.db}} --threads {cpus} --min-abundance {emu_min_ab} # > /dev/null 2>&1
-        echo finished EMUUUUUUUUUUUUUUUUUUUUU
+        """
+        mkdir -p {output_dir}/results/emu
+        emu abundance {input.fastq} --output-dir {output_dir}/results/emu --db {input.db} --threads {threads} --min-abundance {params.min_ab}
         """
 
 
-rule emu_compile:
-    input: 
-        table=expand(f"{output_dir}/results/emu/{{sample}}_{{tax_db}}_rel-abundance.tsv", sample=sample_names, tax_db=tax_db)
+rule reporter:
+    input:
+        seqkit_pre = f"{config['output_dir']}/QC/raw_qc_initial/readcount/raw_reads_counts.txt",
+        seqkit_post = f"{config['output_dir']}/QC/raw_qc_post/readcount/filtered_reads_counts.txt",
+        emu_results = expand(
+            "{output_dir}/results/emu/{sample}-nanofilt_rel-abundance.tsv",
+            output_dir=config['output_dir'],
+            sample=config['sample_names']  
+        ),
+        **({ "cutadapt": f"{config['output_dir']}/intermediate/cutadapt/combined_cutadapt.log" } if to_cutadapt else {})
     output:
-        table="{output_dir}/results/emu-combined-{rank}.tsv"
+        report = f"{config['output_dir']}/results/final_report.txt"
     params:
-        rank=rank
-    shell:
-        f"""
-        echo "{{params.rank}}"
-        emu combine-outputs {output_dir}/results/emu/ {{params.rank}} > /dev/null 2>&1
-        """
+        config.get("trimming_method"), 
+        nl_min_qual = config["nl_min_qual"],
+        nl_min_len = config["nl_min_len"],
+        nl_max_len = config["nl_max_len"],
+        emu_min_ab = config["emu_min_ab"],
+        forward_p = config.get("forward_primer"),
+        reverse_p = config.get("reverse_primer"),
+        RC_FWD = config.get("RC_FWD"), 
+        RC_RVS = config.get("RC_RVS"),
+        start = start_time,
+        tax_db = config["tax_db"],
+        to_cutadapt = to_cutadapt,
+        trimming_method = trimming_method
+    script:
+        "scripts/reporter_long.py"

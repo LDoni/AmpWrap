@@ -1,0 +1,4 @@
+Building DAG of jobs...
+WildcardError in rule reporter in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 246:
+Wildcards in input files cannot be determined from output files:
+'sample'

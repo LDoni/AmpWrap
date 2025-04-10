@@ -1,0 +1,3 @@
+KeyError in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 263:
+'trimming_method'
+  File "/media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long", line 263, in <module>

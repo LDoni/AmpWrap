@@ -31,7 +31,7 @@ def print_banner():
 """
     print(banner)
 
-    print(f"Welcome to AMP WRAP")
+    print(f"Welcome to ampwrap_short")
 
 
 
@@ -88,13 +88,17 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
     return config_path
 
 def run_snakemake(config_path,is_quiet=False):
-    args = ["snakemake", "--configfile", config_path, "--cores", "all", "--nolock"]
+    import os
+    print(os.getcwd())
+    args = ["snakemake", "--configfile", config_path, "--cores", "all", "--nolock", "--snakefile", "snakefile.short"]
+    print(" ".join(args))
     if is_quiet: args += ["--quiet", "all"]
     try:
         subprocess.run(args, check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error running Snakemake with config file '{config_path}': {e}")
         sys.exit(1)
+
 def main():
     print_banner()
     
@@ -102,7 +106,7 @@ def main():
     parser.add_argument("-i", "--input_directory", required=True, help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
     parser.add_argument("-a", "--forward_primer", required=True, help="Specify the forward primer sequence")
     parser.add_argument("-A", "--reverse_primer", required=True, help="Specify the reverse primer sequence")
-    parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "dadaWRAP"), help="Specify the output directory (default: ./dadaWRAP)")
+    parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "ampwrap_short"), help="Specify the output directory (default: ./ampwrap_short)")
     parser.add_argument("-l", "--amplen", type=int, help="Specify the length of the amplified sequence target (e.g., R926 - F515 = 411pb - pF19 - pR20 = 372)")
     parser.add_argument(
     "-d", "--db_choice",
@@ -130,7 +134,6 @@ def main():
     output_dir = args.output_directory
     is_quiet = args.quiet
 
-    # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
     file_patterns = ["*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
@@ -138,7 +141,6 @@ def main():
         file
         for pattern in file_patterns
         for file in glob.glob(os.path.join(input_dir, pattern))
-        #if "_R1" in file or "_R2" in file
 	if re.search(r"_[Rr][12](?:_|\.)", file)
     ]
 
@@ -148,7 +150,6 @@ def main():
 
     extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
 
-###aggiungere variabile per figaroooooo
     figaro_name = None
     metainfo = []
     for fxn in (IlluminaStandard, FVieiraStandard):
@@ -172,7 +173,6 @@ def main():
             figaro_name = fxn.__name__
             sf.write(f"{sample} {direction} {file_path} {fxn.__name__}\n")
 
-    #print(f"Processing completed. Output written to {sample_tab_path}")
 
     config_path = write_config_yaml(
         input_dir, output_dir, args.forward_primer, args.reverse_primer, args.amplen, args.db_choice, metainfo, extension, figaro_name

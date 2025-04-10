@@ -1,0 +1,10 @@
+Building DAG of jobs...
+File path /media/shared1/alessiam/dadawrap/datiseq//Lyb1_11_L001_R1_001.fastq.gz contains double '/'. This is likely unintended. It can also lead to inconsistent results of the file-matching approach used by Snakemake.
+File path /media/shared1/alessiam/dadawrap/datiseq//Lyb2_11_L001_R2_001.fastq.gz contains double '/'. This is likely unintended. It can also lead to inconsistent results of the file-matching approach used by Snakemake.
+File path /media/shared1/alessiam/dadawrap/datiseq//Lyb2_11_L001_R1_001.fastq.gz contains double '/'. This is likely unintended. It can also lead to inconsistent results of the file-matching approach used by Snakemake.
+File path /media/shared1/alessiam/dadawrap/datiseq//Lyb1_11_L001_R2_001.fastq.gz contains double '/'. This is likely unintended. It can also lead to inconsistent results of the file-matching approach used by Snakemake.
+MissingInputException in rule figaro in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile, line 197:
+Missing input files for rule figaro:
+    output: /media/shared1/alessiam/dadawrap/benchmark_results4/intermediate/figaro/trimParameters.json
+    affected files:
+        /media/shared1/alessiam/dadawrap/benchmark_results4/figaro_inp

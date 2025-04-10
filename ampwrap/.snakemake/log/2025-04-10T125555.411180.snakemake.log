@@ -1,0 +1,41 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job             count
+------------  -------
+all                 1
+multiqc_post        1
+reporter            1
+total               3
+
+Select jobs to execute...
+
+[Thu Apr 10 12:55:56 2025]
+rule reporter:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/readcount/filtered_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/emu/subsampled0.2_carajo-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/emu/subsampled0.3_SRR20752542-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/intermediate/cutadapt/combined_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/final_report.txt
+    jobid: 19
+    reason: Params have changed since last execution
+    resources: tmpdir=/tmp
+
+[Thu Apr 10 12:55:56 2025]
+rule multiqc_post:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/multiqc_report.html
+    jobid: 14
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/multiqc_report.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_5
+    resources: tmpdir=/tmp
+
+[Thu Apr 10 12:55:57 2025]
+Finished job 19.
+1 of 3 steps (33%) done
+Waiting at most 5 seconds for missing files.
+MissingOutputException in rule multiqc_post in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 195:
+Job 14  completed successfully, but some output files are missing. Missing files after 5 seconds. This might be due to filesystem latency. If that is the case, consider to increase the wait time with --latency-wait:
+/media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/multiqc_report.html
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-04-10T125555.411180.snakemake.log

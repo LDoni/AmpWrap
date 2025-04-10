@@ -1,0 +1,106 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+cutadapt_primers             1
+emu_abundance                1
+emu_compile                  1
+fastqc_initial               1
+fastqc_post                  1
+multiqc_final                1
+multiqc_initial              1
+nanofilt                     1
+total                       10
+
+Select jobs to execute...
+
+[Tue Apr  8 13:03:47 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    jobid: 1
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 13:03:47 2025]
+rule cutadapt_primers:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz
+    log: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    jobid: 3
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 13:03:53 2025]
+Finished job 1.
+1 of 10 steps (10%) done
+Select jobs to execute...
+
+[Tue Apr  8 13:03:53 2025]
+rule multiqc_initial:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/multiqc_report.html
+    jobid: 2
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/multiqc_report.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 13:03:55 2025]
+Finished job 2.
+2 of 10 steps (20%) done
+[Tue Apr  8 13:03:59 2025]
+Finished job 3.
+3 of 10 steps (30%) done
+Select jobs to execute...
+
+[Tue Apr  8 13:03:59 2025]
+rule combine_cutadapt_logs:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/combined_cutadapt.log
+    jobid: 4
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 13:03:59 2025]
+rule nanofilt:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq
+    jobid: 6
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 13:03:59 2025]
+Error in rule combine_cutadapt_logs:
+    jobid: 4
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/combined_cutadapt.log (check log file(s) for error details)
+    shell:
+        
+        cat /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log > /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+        echo -e "sample	reads retained	bps retained" > /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/combined_cutadapt.log
+        paste <(echo subsampled0.3_SRR20752542 | tr " " "
+") <(grep "passing" /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") <(grep "filtered" /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") >> /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/combined_cutadapt.log
+        cat /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/combined_cutadapt.log
+        mv /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log "/media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_post_cutadapt/"
+          
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job combine_cutadapt_logs since they might be corrupted:
+/media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+[Tue Apr  8 13:04:02 2025]
+Finished job 6.
+4 of 10 steps (40%) done
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-04-08T130347.169323.snakemake.log

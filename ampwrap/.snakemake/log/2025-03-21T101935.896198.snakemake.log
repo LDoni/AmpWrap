@@ -1,0 +1,6 @@
+Building DAG of jobs...
+MissingInputException in rule figaro in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.short, line 199:
+Missing input files for rule figaro:
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/figaro/trimParameters.json
+    affected files:
+        /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp

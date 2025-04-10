@@ -1,0 +1,116 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+dada2_assign_taxonomy        1
+dada2_error_learning         1
+dada2_filter                 1
+dada2_infer_asvs             1
+dada2_remove_chimeras        1
+fastqc_initial               1
+fastqc_post_cutadapt         1
+figaro                       1
+input_symlink                3
+multiqc_final                1
+multiqc_initial              1
+reporter                     1
+track_reads                  1
+total                       17
+
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 10:43:40 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/datiseq/Lyb2_11_L001_R1_001.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_initial/Lyb2_11_L001_R1_001_fastqc.html
+    jobid: 7
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_initial/Lyb2_11_L001_R1_001_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, file=Lyb2_11_L001_R1_001
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 10:43:42 2025]
+Finished job 7.
+1 of 17 steps (6%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 10:43:43 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R1.fq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html
+    jobid: 14
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, sample=Lyb2, index=1
+    threads: 15
+    resources: tmpdir=/tmp
+
+
+[Fri Mar 21 10:43:43 2025]
+rule combine_cutadapt_logs:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+    jobid: 18
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    resources: tmpdir=/tmp
+
+
+[Fri Mar 21 10:43:43 2025]
+rule input_symlink:
+    input: /media/shared1/alessiam/dadawrap/datiseq/Lyb2_11_L001_R1_001.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb1_R1.fastq.gz
+    jobid: 1
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb1_R1.fastq.gz
+    wildcards: sample=Lyb1, index=1.fastq, extension=gz
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 10:43:43 2025]
+rule input_symlink:
+    input: /media/shared1/alessiam/dadawrap/datiseq/Lyb2_11_L001_R1_001.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb2_R1.fastq.gz
+    jobid: 3
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb2_R1.fastq.gz
+    wildcards: sample=Lyb2, index=1.fastq, extension=gz
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 10:43:43 2025]
+rule input_symlink:
+    input: /media/shared1/alessiam/dadawrap/datiseq/Lyb2_11_L001_R1_001.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb2_R2.fastq.gz
+    jobid: 4
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb2_R2.fastq.gz
+    wildcards: sample=Lyb2, index=2.fastq, extension=gz
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 10:43:43 2025]
+Error in rule combine_cutadapt_logs:
+    jobid: 18
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log (check log file(s) for error details)
+    shell:
+        
+        cat /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log > /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+        echo -e "sample	reads retained	bps retained" > /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        paste <(echo dict_keys(['Lyb1', 'Lyb2']) | tr " " "
+") <(grep "passing" cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") <(grep "filtered" cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") >> /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        cat /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        mv /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log f"/media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/"
+         
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job combine_cutadapt_logs since they might be corrupted:
+/media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+[Fri Mar 21 10:43:45 2025]
+Finished job 14.
+2 of 17 steps (12%) done
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-03-21T104338.692330.snakemake.log

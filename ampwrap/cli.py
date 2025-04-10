@@ -26,7 +26,7 @@ args = sys.argv[2:]  # Argomenti successivi
 
 # Verifica se il workflow è valido
 if workflow not in workflows:
-    print(f"❌ Errore: '{workflow}' non è un comando valido. Usa 'short' o 'long'.")
+    print(f"❌ Error: '{workflow}' is not a valid command. Use 'short' or 'long'.")
     sys.exit(1)
 
 # Percorso dello script
@@ -34,7 +34,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 script_path = os.path.join(script_dir, workflows[workflow])
 
 if not os.path.exists(script_path):
-    print(f"❌ Errore: Script '{script_path}' non trovato!")
+    print(f"❌ Error: Script '{script_path}' not found!")
     sys.exit(1)
 
 # Esegue il workflow direttamente nell'ambiente attivo
@@ -48,5 +48,5 @@ try:
     #subprocess.run(command, shell=True, check=True)
     subprocess.run(command, check=True)
 except subprocess.CalledProcessError:
-    print(f"❌ Errore: Esecuzione di '{workflow}' fallita.")
+    print(f"❌ Error: Execution of '{workflow}' failed.")
     sys.exit(1)

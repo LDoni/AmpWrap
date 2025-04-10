@@ -1,0 +1,4 @@
+Building DAG of jobs...
+WildcardError in rule seqkit_stats_all_files in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 85:
+Wildcards in input files cannot be determined from output files:
+'sample'

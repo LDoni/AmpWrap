@@ -1,0 +1,74 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+dada2_assign_taxonomy        1
+dada2_error_learning         1
+dada2_filter                 1
+dada2_infer_asvs             1
+dada2_remove_chimeras        1
+reporter                     1
+track_reads                  1
+total                        9
+
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 11:21:16 2025]
+rule dada2_filter:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/figaro/trimParameters.json
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/checkout.filter
+    jobid: 19
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/checkout.filter
+    resources: tmpdir=/tmp
+
+
+[Fri Mar 21 11:21:16 2025]
+rule combine_cutadapt_logs:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+    jobid: 18
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 11:21:16 2025]
+Error in rule combine_cutadapt_logs:
+    jobid: 18
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log (check log file(s) for error details)
+    shell:
+        
+        cat /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log > /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+        echo -e "sample	reads retained	bps retained" > /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        paste <(echo ['Lyb1', 'Lyb2'] | tr " " "
+") <(grep "passing" /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") <(grep "filtered" /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") >> /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        cat /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        mv /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log f"/media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/"
+         
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job combine_cutadapt_logs since they might be corrupted:
+/media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+Terminating processes on user request, this might take some time.
+[Fri Mar 21 11:21:21 2025]
+Error in rule dada2_filter:
+    jobid: 19
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/figaro/trimParameters.json
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/checkout.filter
+    shell:
+        
+        mkdir -p /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered
+        Rscript scripts/dada2_filter.R         /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/figaro/trimParameters.json
+
+    touch /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/checkout.filter
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Complete log: .snakemake/log/2025-03-21T112115.335741.snakemake.log

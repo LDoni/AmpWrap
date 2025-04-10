@@ -1,0 +1,280 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+cutadapt_primers             2
+emu_abundance                2
+fastqc_initial               2
+fastqc_post                  2
+multiqc_initial              1
+multiqc_post                 1
+nanofilt                     2
+porechop                     2
+reporter                     1
+seqkit_stats_post_qc         1
+seqkit_stats_pre_qc          1
+total                       19
+
+Select jobs to execute...
+
+[Wed Apr  9 15:40:07 2025]
+rule porechop:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.2_carajo.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.2_carajo-porechop.fastq.gz
+    jobid: 5
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.2_carajo-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.2_carajo
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:40:07 2025]
+rule porechop:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz
+    jobid: 6
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:40:07 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.2_carajo.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.2_carajo_fastqc.html
+    jobid: 1
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.2_carajo_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.2_carajo
+    resources: tmpdir=/tmp
+
+
+[Wed Apr  9 15:40:07 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    jobid: 2
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+
+[Wed Apr  9 15:40:07 2025]
+rule seqkit_stats_pre_qc:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.2_carajo.fastq, /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt
+    jobid: 3
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:40:09 2025]
+Finished job 3.
+1 of 19 steps (5%) done
+[Wed Apr  9 15:40:19 2025]
+Finished job 1.
+2 of 19 steps (11%) done
+[Wed Apr  9 15:40:19 2025]
+Finished job 2.
+3 of 19 steps (16%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:40:19 2025]
+rule multiqc_initial:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.2_carajo_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/multiqc_report.html
+    jobid: 4
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/multiqc_report.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.2_carajo_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:40:29 2025]
+Finished job 4.
+4 of 19 steps (21%) done
+[Wed Apr  9 15:46:32 2025]
+Finished job 5.
+5 of 19 steps (26%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:46:32 2025]
+rule cutadapt_primers:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.2_carajo-porechop.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.fq.gz
+    log: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.log
+    jobid: 7
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.fq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.log; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.2_carajo-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.2_carajo
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:46:45 2025]
+Finished job 7.
+6 of 19 steps (32%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:46:45 2025]
+rule nanofilt:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.fq.gz
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq
+    jobid: 11
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.2_carajo
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:47:10 2025]
+Finished job 6.
+7 of 19 steps (37%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:47:10 2025]
+rule cutadapt_primers:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz
+    log: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    jobid: 8
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:47:14 2025]
+Finished job 8.
+8 of 19 steps (42%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:47:16 2025]
+rule nanofilt:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq
+    jobid: 13
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+
+[Wed Apr  9 15:47:16 2025]
+rule combine_cutadapt_logs:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.log, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/combined_cutadapt.log
+    jobid: 9
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/combined_cutadapt.log, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.log, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.log
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:47:17 2025]
+Finished job 9.
+9 of 19 steps (47%) done
+[Wed Apr  9 15:47:19 2025]
+Finished job 11.
+10 of 19 steps (53%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:47:19 2025]
+rule fastqc_post:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html
+    jobid: 10
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.2_carajo
+    resources: tmpdir=/tmp
+
+
+[Wed Apr  9 15:47:19 2025]
+rule emu_abundance:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq, db_s/emu/emu
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.2_carajo-nanofilt_rel-abundance.tsv
+    jobid: 17
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.2_carajo-nanofilt_rel-abundance.tsv; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.2_carajo
+    threads: 15
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:47:20 2025]
+Finished job 13.
+11 of 19 steps (58%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:47:21 2025]
+rule emu_abundance:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq, db_s/emu/emu
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.3_SRR20752542-nanofilt_rel-abundance.tsv
+    jobid: 18
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.3_SRR20752542-nanofilt_rel-abundance.tsv; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.3_SRR20752542
+    threads: 15
+    resources: tmpdir=/tmp
+
+
+[Wed Apr  9 15:47:21 2025]
+rule fastqc_post:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html
+    jobid: 12
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:47:35 2025]
+Finished job 12.
+12 of 19 steps (63%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:47:35 2025]
+rule seqkit_stats_post_qc:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt
+    jobid: 15
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.2_carajo-nanofilt.fastq, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/nanofilt/subsampled0.3_SRR20752542-nanofilt.fastq
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:47:35 2025]
+Finished job 10.
+13 of 19 steps (68%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:47:35 2025]
+rule multiqc_post:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/multiqc_report.html
+    jobid: 14
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/multiqc_report.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results_2
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:47:37 2025]
+Finished job 15.
+14 of 19 steps (74%) done
+Select jobs to execute...
+
+[Wed Apr  9 15:47:37 2025]
+rule reporter:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/combined_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/final_report.txt
+    jobid: 19
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/final_report.txt; Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/combined_cutadapt.log, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 15:48:13 2025]
+Finished job 19.
+15 of 19 steps (79%) done
+[Wed Apr  9 15:48:29 2025]
+Finished job 14.
+16 of 19 steps (84%) done
+[Wed Apr  9 15:57:45 2025]
+Finished job 17.
+17 of 19 steps (89%) done
+[Wed Apr  9 16:07:16 2025]
+Finished job 18.
+18 of 19 steps (95%) done
+Select jobs to execute...
+
+[Wed Apr  9 16:07:18 2025]
+localrule all:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.2_carajo_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/multiqc_report.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.2_carajo-porechop.fastq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.fq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/multiqc_report.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt, db_s/emu/emu, db_s/emu/emu/taxonomy.tsv, db_s/emu/emu/species_taxid.fasta, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.2_carajo-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.3_SRR20752542-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/final_report.txt
+    jobid: 0
+    reason: Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.2_carajo_cutadapt.fq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/multiqc_report.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/subsampled0.2_carajo_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.2_carajo-porechop.fastq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/multiqc_report.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/final_report.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.3_SRR20752542-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/subsampled0.3_SRR20752542_cutadapt.fq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/emu/subsampled0.2_carajo-nanofilt_rel-abundance.tsv
+    resources: tmpdir=/tmp
+
+[Wed Apr  9 16:07:18 2025]
+Finished job 0.
+19 of 19 steps (100%) done
+Complete log: .snakemake/log/2025-04-09T153951.877863.snakemake.log

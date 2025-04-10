@@ -1,0 +1,3 @@
+Building DAG of jobs...
+WorkflowError in rule reporter in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 280:
+Function did not return str or list of str.

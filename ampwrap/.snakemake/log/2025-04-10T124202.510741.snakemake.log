@@ -1,0 +1,37 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job         count
+--------  -------
+all             1
+reporter        1
+total           2
+
+Select jobs to execute...
+
+[Thu Apr 10 12:42:04 2025]
+rule reporter:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/readcount/filtered_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/emu/subsampled0.2_carajo-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/emu/subsampled0.3_SRR20752542-nanofilt_rel-abundance.tsv
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/final_report.txt
+    jobid: 16
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/final_report.txt; Params have changed since last execution
+    resources: tmpdir=/tmp
+
+[Thu Apr 10 12:42:04 2025]
+Finished job 16.
+1 of 2 steps (50%) done
+Select jobs to execute...
+
+[Thu Apr 10 12:42:04 2025]
+localrule all:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_initial/subsampled0.2_carajo_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_initial/multiqc_report.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/intermediate/porechop/subsampled0.2_carajo-porechop.fastq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/subsampled0.2_carajo-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/subsampled0.3_SRR20752542-nanofilt_fastqc.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/multiqc_report.html, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/QC/raw_qc_post/readcount/filtered_reads_counts.txt, db_s/emu/emu, db_s/emu/emu/taxonomy.tsv, db_s/emu/emu/species_taxid.fasta, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/emu/subsampled0.2_carajo-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/emu/subsampled0.3_SRR20752542-nanofilt_rel-abundance.tsv, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/final_report.txt
+    jobid: 0
+    reason: Input files updated by another job: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_5/results/final_report.txt
+    resources: tmpdir=/tmp
+
+[Thu Apr 10 12:42:04 2025]
+Finished job 0.
+2 of 2 steps (100%) done
+Complete log: .snakemake/log/2025-04-10T124202.510741.snakemake.log

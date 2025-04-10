@@ -1,0 +1,60 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+cutadapt_primers             1
+emu_abundance                1
+fastqc_initial               1
+fastqc_post                  1
+multiqc_initial              1
+multiqc_post                 1
+nanofilt                     1
+porechop                     1
+seqkit_stats_post_qc         1
+seqkit_stats_pre_qc          1
+total                       12
+
+Select jobs to execute...
+
+[Tue Apr  8 16:52:58 2025]
+rule porechop:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz
+    jobid: 4
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/intermediate/porechop/subsampled0.3_SRR20752542-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 16:52:58 2025]
+rule seqkit_stats_pre_qc:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/readcount/raw_reads_counts.txt
+    jobid: 2
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/readcount/raw_reads_counts.txt
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 16:52:58 2025]
+rule fastqc_initial:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    jobid: 1
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results, sample=subsampled0.3_SRR20752542
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 16:52:59 2025]
+Finished job 2.
+1 of 12 steps (8%) done
+[Tue Apr  8 16:53:03 2025]
+Finished job 1.
+2 of 12 steps (17%) done
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-04-08T165258.477581.snakemake.log

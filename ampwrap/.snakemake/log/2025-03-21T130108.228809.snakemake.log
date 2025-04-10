@@ -1,0 +1,161 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+cutadapt                     2
+fastqc_post_cutadapt         4
+multiqc_final                1
+reporter                     1
+total                       10
+
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 13:01:09 2025]
+rule cutadapt:
+    input: /media/shared1/alessiam/dadawrap/datiseq/Lyb1_11_L001_R1_001.fastq.gz, /media/shared1/alessiam/dadawrap/datiseq/Lyb1_11_L001_R2_001.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R2.fq.gz
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log
+    jobid: 10
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R2.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, sample=Lyb1
+    resources: tmpdir=/tmp
+
+
+[Fri Mar 21 13:01:09 2025]
+rule cutadapt:
+    input: /media/shared1/alessiam/dadawrap/datiseq/Lyb2_11_L001_R2_001.fastq.gz, /media/shared1/alessiam/dadawrap/datiseq/Lyb2_11_L001_R1_001.fastq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R2.fq.gz
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    jobid: 11
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R1.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, sample=Lyb2
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 13:01:11 2025]
+Finished job 11.
+1 of 10 steps (10%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 13:01:12 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R1.fq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html
+    jobid: 14
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R1.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, sample=Lyb2, index=1
+    threads: 15
+    resources: tmpdir=/tmp
+
+
+[Fri Mar 21 13:01:12 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R2.fq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R2_fastqc.html
+    jobid: 15
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R2_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R2.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, sample=Lyb2, index=2
+    threads: 15
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 13:01:12 2025]
+Finished job 10.
+2 of 10 steps (20%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 13:01:13 2025]
+rule combine_cutadapt_logs:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+    jobid: 18
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log; Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 13:01:13 2025]
+Finished job 18.
+3 of 10 steps (30%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 13:01:14 2025]
+rule reporter:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/results/read-count-tracking.tsv, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/figaro/trimParameters.json
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/results/final_report.txt
+    jobid: 26
+    reason: Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 13:01:14 2025]
+Finished job 14.
+4 of 10 steps (40%) done
+[Fri Mar 21 13:01:14 2025]
+Finished job 15.
+5 of 10 steps (50%) done
+Select jobs to execute...
+Failed to solve scheduling problem with ILP solver. Falling back to greedy solver. Run Snakemake with --verbose to see the full solver output for debugging the problem.
+
+[Fri Mar 21 13:01:15 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R2.fq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R2_fastqc.html
+    jobid: 13
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R2_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R2.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, sample=Lyb1, index=2
+    threads: 15
+    resources: tmpdir=/tmp
+
+
+[Fri Mar 21 13:01:15 2025]
+rule fastqc_post_cutadapt:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R1.fq.gz
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R1_fastqc.html
+    jobid: 12
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R1_fastqc.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R1.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/datiseq_out, sample=Lyb1, index=1
+    threads: 15
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 13:01:15 2025]
+Finished job 26.
+6 of 10 steps (60%) done
+[Fri Mar 21 13:01:18 2025]
+Finished job 13.
+7 of 10 steps (70%) done
+[Fri Mar 21 13:01:18 2025]
+Finished job 12.
+8 of 10 steps (80%) done
+Select jobs to execute...
+
+[Fri Mar 21 13:01:18 2025]
+rule multiqc_final:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R2_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/multiqc_report.html
+    jobid: 16
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/multiqc_report.html; Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html
+    threads: 32
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 13:01:19 2025]
+Finished job 16.
+9 of 10 steps (90%) done
+Select jobs to execute...
+
+[Fri Mar 21 13:01:19 2025]
+localrule all:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb1_R1.fastq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb1_R2.fastq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb2_R1.fastq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/figaro_inp/Lyb2_R2.fastq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_initial/Lyb1_11_L001_R1_001_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_initial/Lyb2_11_L001_R2_001_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_initial/Lyb2_11_L001_R1_001_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_initial/Lyb1_11_L001_R2_001_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_initial/multiqc_report.html, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/multiqc_report.html, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/figaro/trimParameters.json, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb1_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R1_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_filtered/Lyb2_R2_filtered.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_error_learning/err_forward_reads.rds, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/dada2_error_learning/err_reverse_reads.rds, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/merged_asvs.rds, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/no_chimera_asvs.rds, db_s/dada2/SILVA_SSU_r138_2019.RData, /media/shared1/alessiam/dadawrap/datiseq_out/results/ASVs.fa, /media/shared1/alessiam/dadawrap/datiseq_out/results/ASVs_counts.tsv, /media/shared1/alessiam/dadawrap/datiseq_out/results/ASVs_taxonomy.tsv, /media/shared1/alessiam/dadawrap/datiseq_out/results/read-count-tracking.tsv, /media/shared1/alessiam/dadawrap/datiseq_out/results/final_report.txt
+    jobid: 0
+    reason: Input files updated by another job: /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt, /media/shared1/alessiam/dadawrap/datiseq_out/results/final_report.txt, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb2_trimmed_R1_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/multiqc_report.html, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R2.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_trimmed_R1.fq.gz, /media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/Lyb1_trimmed_R2_fastqc.html, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_trimmed_R1.fq.gz
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 13:01:19 2025]
+Finished job 0.
+10 of 10 steps (100%) done
+Complete log: .snakemake/log/2025-03-21T130108.228809.snakemake.log

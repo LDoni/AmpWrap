@@ -1,0 +1,45 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+reporter                     1
+total                        3
+
+Select jobs to execute...
+
+[Fri Mar 21 12:53:20 2025]
+rule combine_cutadapt_logs:
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+    jobid: 18
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    resources: tmpdir=/tmp
+
+[Fri Mar 21 12:53:20 2025]
+Error in rule combine_cutadapt_logs:
+    jobid: 18
+    input: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log, /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+    log: /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log (check log file(s) for error details)
+    shell:
+        
+        cat /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log > /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+        echo -e "sample	reads retained	bps retained" > /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        paste <(echo Lyb1 Lyb2 | tr " " "
+") <(grep "passing" /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") <(grep "filtered" /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") >> /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        cat /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/combined_cutadapt.log
+        mv /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb1_cutadapt.log /media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/Lyb2_cutadapt.log f"/media/shared1/alessiam/dadawrap/datiseq_out/QC/raw_qc_post_cutadapt/"
+         
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Removing output files of failed job combine_cutadapt_logs since they might be corrupted:
+/media/shared1/alessiam/dadawrap/datiseq_out/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-03-21T125320.386205.snakemake.log

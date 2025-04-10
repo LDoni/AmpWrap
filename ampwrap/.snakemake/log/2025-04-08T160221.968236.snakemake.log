@@ -1,0 +1,83 @@
+host: wsmicrogeno-ThinkStation-P3-Tower
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                       count
+----------------------  -------
+all                           1
+emu_abundance                 1
+fastqc_initial                1
+fastqc_post                   1
+multiqc_final                 1
+multiqc_initial               1
+nanofilt                      1
+porechop                      1
+seqkit_stats_all_files        1
+total                         9
+
+Select jobs to execute...
+Execute 3 jobs...
+
+[Tue Apr  8 16:02:22 2025]
+localrule porechop:
+    input: /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq
+    output: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    jobid: 4
+    reason: Missing output files: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/results_nanopore_prova, sample=subsample_SRR32090201
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 16:02:22 2025]
+localrule seqkit_stats_all_files:
+    input: /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq
+    output: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/readcount/raw_reads_counts.txt
+    jobid: 2
+    reason: Missing output files: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/readcount/raw_reads_counts.txt
+    wildcards: output_dir=/media/shared1/alessiam/results_nanopore_prova
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 16:02:22 2025]
+localrule fastqc_initial:
+    input: /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq
+    output: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html
+    jobid: 1
+    reason: Missing output files: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/results_nanopore_prova, sample=subsample_SRR32090201
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 16:02:22 2025]
+Error in rule porechop:
+    jobid: 4
+    input: /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq
+    output: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    shell:
+        
+                 mkdir -p /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop
+                 porechop_abi -i /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq -o /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+[Tue Apr  8 16:02:22 2025]
+Error in rule fastqc_initial:
+    jobid: 1
+    input: /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq
+    output: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html
+    shell:
+        
+        mkdir -p /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial
+        fastqc /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq -o $(dirname /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html)  > /dev/null 2>&1
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+[Tue Apr  8 16:02:22 2025]
+Finished job 2.
+1 of 9 steps (11%) done
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-04-08T160221.968236.snakemake.log
+WorkflowError:
+At least one job did not complete successfully.

@@ -1,0 +1,70 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count
+---------------------  -------
+all                          1
+combine_cutadapt_logs        1
+cutadapt_primers             1
+emu_abundance                1
+emu_compile                  1
+emu_database                 1
+fastqc_post                  1
+multiqc_final                1
+multiqc_initial              1
+nanofilt                     1
+total                       10
+
+Select jobs to execute...
+
+[Tue Apr  8 11:14:14 2025]
+rule multiqc_initial:
+    input: /media/shared1/alessiam/dadawrap/bench_nano_999/QC/raw_qc_initial/SRR20752542_fastqc.html
+    output: /media/shared1/alessiam/dadawrap/bench_nano_999/QC/raw_qc_initial/multiqc_report.html
+    jobid: 2
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/bench_nano_999/QC/raw_qc_initial/multiqc_report.html
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 11:14:14 2025]
+rule cutadapt_primers:
+    input: /media/shared1/alessiam/dadawrap/bench_nano/SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt/SRR20752542_cutadapt.fq.gz
+    log: /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt/SRR20752542_cutadapt.log
+    jobid: 3
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt/SRR20752542_cutadapt.fq.gz
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/bench_nano_999, sample=SRR20752542
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 11:14:14 2025]
+rule emu_database:
+    output: db_s/emu/rdp, db_s/emu/rdp/taxonomy.tsv, db_s/emu/rdp/species_taxid.fasta
+    jobid: 8
+    reason: Missing output files: db_s/emu/rdp, db_s/emu/rdp/species_taxid.fasta, db_s/emu/rdp/taxonomy.tsv
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 11:14:14 2025]
+Error in rule cutadapt_primers:
+    jobid: 3
+    input: /media/shared1/alessiam/dadawrap/bench_nano/SRR20752542.fastq
+    output: /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt/SRR20752542_cutadapt.fq.gz
+    log: /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt/SRR20752542_cutadapt.log (check log file(s) for error details)
+    shell:
+        
+      mkdir -p /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt
+      cutadapt -e 0.2 -O 15 --revcomp -o /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt/SRR20752542_cutadapt.fq.gz -a None...None /media/shared1/alessiam/dadawrap/bench_nano/SRR20752542.fastq > /media/shared1/alessiam/dadawrap/bench_nano_999/intermediate/cutadapt/SRR20752542_cutadapt.log 
+      
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+[Tue Apr  8 11:14:19 2025]
+Finished job 2.
+1 of 10 steps (10%) done
+[Tue Apr  8 11:16:25 2025]
+Finished job 8.
+2 of 10 steps (20%) done
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-04-08T111414.179899.snakemake.log

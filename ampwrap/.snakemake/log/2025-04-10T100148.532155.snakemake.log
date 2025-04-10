@@ -1,0 +1,35 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job         count
+--------  -------
+all             1
+reporter        1
+total           2
+
+Select jobs to execute...
+
+[Thu Apr 10 10:01:52 2025]
+rule reporter:
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/combined_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/final_report.txt
+    jobid: 19
+    reason: Missing output files: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/final_report.txt
+    resources: tmpdir=/tmp
+
+[Thu Apr 10 10:01:53 2025]
+Error in rule reporter:
+    jobid: 19
+    input: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_initial/readcount/raw_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/QC/raw_qc_post/readcount/filtered_reads_counts.txt, /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/intermediate/cutadapt/combined_cutadapt.log
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results_2/results/final_report.txt
+
+RuleException:
+CalledProcessError in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 325:
+Command 'set -euo pipefail;  /home/ebosi/miniforge3/envs/ampwrap/bin/python3.9 /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/.snakemake/scripts/tmpltexop2y.reporter_long.py' returned non-zero exit status 1.
+  File "/media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long", line 325, in __rule_reporter
+  File "/home/ebosi/miniforge3/envs/ampwrap/lib/python3.9/concurrent/futures/thread.py", line 58, in run
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-04-10T100148.532155.snakemake.log

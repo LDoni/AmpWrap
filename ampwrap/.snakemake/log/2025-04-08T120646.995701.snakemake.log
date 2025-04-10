@@ -1,0 +1,7 @@
+Building DAG of jobs...
+MissingInputException in rule fastqc_initial in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 97:
+Missing input files for rule fastqc_initial:
+    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/QC/raw_qc_initial/subsampled0.3_SRR20752542_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results, sample=subsampled0.3_SRR20752542
+    affected files:
+        /media/shared1/alessiam/dadawrap/subseq_nanopore/subsampled0.3_SRR20752542.3_SRR20752542.fastq

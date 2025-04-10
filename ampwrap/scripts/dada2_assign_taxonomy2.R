@@ -41,12 +41,20 @@ colnames(asv_tab) <- sapply(colnames(asv_tab), function(x) strsplit(x, "_")[[1]]
 write.table(asv_tab, file.path(output_dir, "ASVs_counts.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)
 
 # Tabella della tassonomia
-ranks <- c("domain", "phylum", "class", "order", "family", "genus", "species")
-ranks <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+ranks <- c("Domain", "Phylum", "Class", "Order", "Family", "Genus", "Species")
 
 # Sostituisci "unclassified_" con NA
-asv_tax <- taxa
-asv_tax[startsWith(asv_tax, "unclassified_")] <- NA
+
+asv_tax <- t(sapply(tax_info, function(x) {
+  m <- match(ranks, x$rank)
+  taxa <- x$taxon[m]
+  taxa[startsWith(taxa, "unclassified_")] <- NA
+  taxa
+}))
+
+
+
+
 
 # Assicurati che le colonne abbiano i nomi corretti
 colnames(asv_tax) <- ranks

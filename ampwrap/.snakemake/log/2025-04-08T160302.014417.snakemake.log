@@ -1,0 +1,91 @@
+host: wsmicrogeno-ThinkStation-P3-Tower
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 32
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count
+---------------  -------
+all                    1
+emu_abundance          1
+fastqc_initial         1
+fastqc_post            1
+multiqc_final          1
+multiqc_initial        1
+nanofilt               1
+porechop               1
+total                  8
+
+Select jobs to execute...
+Execute 2 jobs...
+
+[Tue Apr  8 16:03:02 2025]
+localrule porechop:
+    input: /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq
+    output: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    jobid: 4
+    reason: Missing output files: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/results_nanopore_prova, sample=subsample_SRR32090201
+    resources: tmpdir=/tmp
+
+
+[Tue Apr  8 16:03:02 2025]
+localrule fastqc_initial:
+    input: /media/shared1/alessiam/subseq_nanopore_ale/subsample_SRR32090201.fastq
+    output: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html
+    jobid: 1
+    reason: Missing output files: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html
+    wildcards: output_dir=/media/shared1/alessiam/results_nanopore_prova, sample=subsample_SRR32090201
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 16:03:06 2025]
+Finished job 1.
+1 of 8 steps (12%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Tue Apr  8 16:03:06 2025]
+localrule multiqc_initial:
+    input: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html
+    output: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/multiqc_report.html
+    jobid: 3
+    reason: Missing output files: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/multiqc_report.html; Input files updated by another job: /media/shared1/alessiam/results_nanopore_prova/QC/raw_qc_initial/subsample_SRR32090201_fastqc.html
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 16:03:11 2025]
+Finished job 3.
+2 of 8 steps (25%) done
+[Tue Apr  8 16:03:44 2025]
+Finished job 4.
+3 of 8 steps (38%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Tue Apr  8 16:03:44 2025]
+localrule nanofilt:
+    input: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    output: /media/shared1/alessiam/results_nanopore_prova/intermediate/nanofilt/subsample_SRR32090201-nanofilt.fastq
+    jobid: 6
+    reason: Missing output files: /media/shared1/alessiam/results_nanopore_prova/intermediate/nanofilt/subsample_SRR32090201-nanofilt.fastq; Input files updated by another job: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    wildcards: output_dir=/media/shared1/alessiam/results_nanopore_prova, sample=subsample_SRR32090201
+    resources: tmpdir=/tmp
+
+[Tue Apr  8 16:03:44 2025]
+Error in rule nanofilt:
+    jobid: 6
+    input: /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz
+    output: /media/shared1/alessiam/results_nanopore_prova/intermediate/nanofilt/subsample_SRR32090201-nanofilt.fastq
+    shell:
+        
+        mkdir -p /media/shared1/alessiam/results_nanopore_prova/intermediate/nanofilt
+        if [[ "/media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz" == *.gz ]]; then
+            zcat /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz | NanoFilt -l 1200 --maxlength 1800 -q 10 > /media/shared1/alessiam/results_nanopore_prova/intermediate/nanofilt/subsample_SRR32090201-nanofilt.fastq
+            cat /media/shared1/alessiam/results_nanopore_prova/intermediate/porechop/subsample_SRR32090201-porechop.fastq.gz | NanoFilt -l 1200 --maxlength 1800 -q 10 > /media/shared1/alessiam/results_nanopore_prova/intermediate/nanofilt/subsample_SRR32090201-nanofilt.fastq
+        
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2025-04-08T160302.014417.snakemake.log
+WorkflowError:
+At least one job did not complete successfully.

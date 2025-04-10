@@ -3,6 +3,7 @@ import glob
 
 
 # Directories and parameters
+start_time = os.system("date")
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
 sample_tab = config["sample_tab"]
@@ -72,19 +73,19 @@ out_name = config.get("db_name",
 
 # functions for inputs
 def getReadFiles(wildcards,d=sample_d):
-    print([i[0] for i in d[wildcards.sample]])
+    #print([i[0] for i in d[wildcards.sample]])
     return [i[0] for i in d[wildcards.sample]]
 
 def getReadFilesDict(wildcards,d=sample_d):
     out = {i[1].lower():i[0] for i in d[wildcards.sample]}
-    print(out)
+    #print(out)
     return out
 
 
 rule all:
     input:
         # figaro input
-        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension)
+        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension),
         # FastQC initial
         expand(f"{config['output_dir']}/QC/raw_qc_initial/{{file}}_fastqc.html", file=files),
         f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
@@ -93,7 +94,7 @@ rule all:
         expand(f"{config['output_dir']}/QC/raw_qc_post_cutadapt/{{sample}}_trimmed_R{{index}}_fastqc.html", sample=samples, index=indices),
         f"{config['output_dir']}/QC/raw_qc_post_cutadapt/multiqc_report.html",
         f"{config['output_dir']}/intermediate/figaro/trimParameters.json",
-        f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
+        f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt",
         # DADA2 
         expand(f"{config['output_dir']}/intermediate/dada2_filtered/{{sample}}_R{{index}}_filtered.fq.gz", sample=samples, index=indices),
         f"{config['output_dir']}/intermediate/dada2_error_learning/err_forward_reads.rds",
@@ -105,7 +106,8 @@ rule all:
         f"{config['output_dir']}/results/ASVs.fa",
         f"{config['output_dir']}/results/ASVs_counts.tsv",
         f"{config['output_dir']}/results/ASVs_taxonomy.tsv",
-        f"{config['output_dir']}/results/read-count-tracking.tsv"
+        f"{config['output_dir']}/results/read-count-tracking.tsv",
+        f"{config['output_dir']}/results/final_report.txt"
 
 
 rule input_symlink:
@@ -113,8 +115,11 @@ rule input_symlink:
     output: f"{output_dir}/figaro_inp/{{sample}}_R{{index}}.{{extension}}"
     run:
         import os
-        src,target = os.path.abspath(input),os.path.abspath(output)
-        os.symlink(src, target)
+        os.makedirs(f"{output_dir}/figaro_inp",exist_ok=True)
+        src,target = os.path.abspath(str(input)),os.path.abspath(str(output))
+        print(src,target)
+        try: os.symlink(src, target)
+        except Exception as E: print(E); raise Error
 
 rule fastqc_initial:
     input:
@@ -154,18 +159,21 @@ rule cutadapt:
         mkdir -p {output_dir}/intermediate/cutadapt
         cutadapt -g "^{params.forward_primer}" -G "^{params.reverse_primer}" --discard-untrimmed \
                  -o {output.r1_trimmed} -p {output.r2_trimmed} \
-                 {input.r1} {input.r2} > {log}      
+                 {input.r1} {input.r2} > {log}
         """
 
 rule combine_cutadapt_logs:
     input: expand("{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log", output_dir=output_dir, sample=samples)
     output: f"{output_dir}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
+    log: f"{output_dir}/intermediate/cutadapt/combined_cutadapt.log"
     shell: 
          f"""
         cat {{input}} > {{output}}
-        echo -e "sample\treads retained\tbps retained"
-        paste <(echo {samples} | tr " " "\n") <(grep "passing" cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")") <(grep "filtered" cutadapt_primer_trimming_stats.txt | cut -f3 -d "(" | tr -d ")")
-        mv {{input}} f"{output_dir}/QC/raw_qc_post_cutadapt/"
+        echo -e "sample\treads retained\tbps retained" > {{log}}
+        paste <(echo {" ".join(list(samples))} | tr " " "\n") <(grep "passing" {{output}} | cut -f3 -d "(" | tr -d ")") <(grep "filtered" {{output}} | cut -f3 -d "(" | tr -d ")") >> {{log}}
+        cat {{log}}
+        mkdir -p "{output_dir}/QC/raw_qc_post_cutadapt/"
+        mv {{input}} "{output_dir}/QC/raw_qc_post_cutadapt/"
          """
 
 
@@ -194,18 +202,19 @@ rule multiqc_final:
 
 rule figaro:
     input:
-        input_dir=f"{output_dir}/figaro_inp"
+        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension)
     output:
         trimParameters= config["output_dir"] + "/intermediate/figaro/trimParameters.json"
     params:
         amplen = amplicon_length,
         forward_primer_length = forward_primer_length,
         reverse_primer_length = reverse_primer_length,
+        input_dir = f"{output_dir}/figaro_inp",
         figaroname = figaroname
     shell:
         """
         mkdir -p {output_dir}/intermediate/figaro
-        scripts/figaro/figaro/figaro.py -i {input.input_dir} -o {output_dir}/intermediate/figaro -a {params.amplen} \
+        scripts/figaro/figaro/figaro.py -i {params.input_dir} -o {output_dir}/intermediate/figaro -a {params.amplen} \
                -f {params.forward_primer_length} -r {params.reverse_primer_length} -F {params.figaroname}  > /dev/null 2>&1
         """
 
@@ -345,3 +354,19 @@ rule track_reads:
         {output_dir}/intermediate/dada2_filtered/filter_summary.tsv {output_dir}/intermediate/dada_fwd.rds \
         {output_dir}/intermediate/dada_rev.rds {input.merged_asvs} {input.no_chimera_asvs} {output.track_reads}
         """
+
+rule reporter:
+    input:
+        cutadapt = f"{config['output_dir']}/intermediate/cutadapt/combined_cutadapt.log",
+        dada2 = f"{config['output_dir']}/results/read-count-tracking.tsv",
+        figaro_json = f"{config['output_dir']}/intermediate/figaro/trimParameters.json"
+    output: 
+        report = f"{config['output_dir']}/results/final_report.txt"
+    params:
+        forward_p = forward_primer,
+        reverse_p = reverse_primer,
+        start = start_time,
+        end = os.system("date"),
+        taxonomy_method = assign_taxonomy_method
+    script:
+        "scripts/reporter_short.py"
