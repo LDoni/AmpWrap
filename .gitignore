@@ -1,0 +1,34 @@
+# File generati da Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Snakemake e ambiente
+.snakemake/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# File di sistema e IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.bak
+
+# File di log e dati temporanei
+*.log
+*.tmp
+*.temp
+
+# File compilati/generati (es. R, C, ecc.)
+*.so
+*.o
+*.a
+
+# File di configurazione locale (se presenti)
+.env
+*.local
+
+# File di output generati (se non vuoi commitarli)
+/results/
+/output/

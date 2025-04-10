@@ -1,4 +1,0 @@
-Building DAG of jobs...
-WildcardError in rule emu_abundance in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 210:
-Wildcards in input files cannot be determined from output files:
-'tax_db'

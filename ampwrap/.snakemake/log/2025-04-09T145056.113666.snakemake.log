@@ -1,3 +1,0 @@
-RuleException in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 247:
-Threads value has to be an integer, float, or a callable.
-  File "/media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long", line 247, in <module>

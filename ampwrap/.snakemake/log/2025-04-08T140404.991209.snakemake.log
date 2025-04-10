@@ -1,7 +1,0 @@
-Building DAG of jobs...
-MissingInputException in rule emu_compile in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 226:
-Missing input files for rule emu_compile:
-    output: /media/shared1/alessiam/dadawrap/subseq_nanopore_results/results/emu-combined-species.tsv
-    wildcards: output_dir=/media/shared1/alessiam/dadawrap/subseq_nanopore_results, rank=species
-    affected files:
-        /media/shared1/alessiam/dadawrap/subseq_nanopore_results/results/emu/subsampled0.3_SRR20752542_rdp_rel-abundance.tsv

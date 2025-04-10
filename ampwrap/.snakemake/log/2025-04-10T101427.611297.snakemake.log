@@ -1,3 +1,0 @@
-SyntaxError:
-Input and output files have to be specified as strings or lists of strings.
-  File "/media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long", line 325, in <module>

@@ -1,5 +1,0 @@
-Building DAG of jobs...
-MissingInputException in rule all in file /media/shared1/alessiam/dadawrap/ampwrap/ampwrap/snakefile.long, line 59:
-Missing input files for rule all:
-    affected files:
-        /media/shared1/alessiam/dadawrap/subseq_nanopore_resultsQC/raw_qc_initial/readcount/raw_reads_counts.txt
