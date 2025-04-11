@@ -1,52 +1,46 @@
 #!/usr/bin/env python3
-
-
-import os
-import subprocess
 import sys
+import subprocess
+from pathlib import Path
 
-usage = """Usage: ampwrap [workflow] [arguments]
-    command: either 'short' or 'long'
-    arguments: to check argument list, use -h
-    e.g., ampwrap short -h"""
+def main():
+    # Help base se non ci sono argomenti
+    if len(sys.argv) <= 1 or sys.argv[1] in ('-h', '--help'):
+        print("""
+Usage: ampwrap <workflow> [args]
+    workflow: 'short' or 'long' (required)
+    args:     arguments for the selected workflow
 
-# Controlla che ci siano argomenti
-if len(sys.argv) <= 1:
-    print(usage)
-    sys.exit(1)
+To see workflow-specific help:
+    ampwrap short --help
+    ampwrap long --help
+""")
+        sys.exit(0 if len(sys.argv) <= 1 else 1)
 
-# Mappa i workflow ai loro script
-workflows = {
-    "short": "./AmpWrap_short",
-    "long": "./AmpWrap_long"
-}
+    # Mappa workflow agli eseguibili
+    workflow = sys.argv[1]
+    executables = {
+        'short': 'AmpWrap_short',
+        'long': 'AmpWrap_long'
+    }
 
-workflow = sys.argv[1]  # Primo argomento: workflow
-args = sys.argv[2:]  # Argomenti successivi
+    # Validazione workflow
+    if workflow not in executables:
+        print(f"Error: Unknown workflow '{workflow}'. Choose 'short' or 'long'.")
+        sys.exit(1)
 
-# Verifica se il workflow è valido
-if workflow not in workflows:
-    print(f"❌ Error: '{workflow}' is not a valid command. Use 'short' or 'long'.")
-    sys.exit(1)
+    # Costruzione comando
+    try:
+        exe_path = Path(__file__).parent / executables[workflow]
+        cmd = [str(exe_path)] + sys.argv[2:]
+        
+        # Esecuzione passando tutto l'help all'eseguibile originale
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)
 
-# Percorso dello script
-script_dir = os.path.dirname(os.path.abspath(__file__))
-script_path = os.path.join(script_dir, workflows[workflow])
-
-if not os.path.exists(script_path):
-    print(f"❌ Error: Script '{script_path}' not found!")
-    sys.exit(1)
-
-# Esegue il workflow direttamente nell'ambiente attivo
-#command = f"{script_path} " + " ".join(args)
-#command = [workflows[workflow]] + args
-command = [script_path] + args
-
-
-
-try:
-    #subprocess.run(command, shell=True, check=True)
-    subprocess.run(command, check=True)
-except subprocess.CalledProcessError:
-    print(f"❌ Error: Execution of '{workflow}' failed.")
-    sys.exit(1)
+if __name__ == '__main__':
+    main()
