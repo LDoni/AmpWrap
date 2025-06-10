@@ -20,8 +20,8 @@
 ## Introduction
 AmpWrap is a streamlined and efficient workflow for the analysis of 16S rRNA gene amplicons, supporting both short-read (Illumina) and long-read (Nanopore) sequencing technologies.
 
-## Installation with Conda
-AmpWrap can be easily installed using Conda or Mamba.
+## Installation 
+AmpWrap can be easily installed using GitHub + Conda or Mamba.
 
 ### Install Miniconda
 To use Conda or Mamba, you first need to install Miniconda:
