@@ -81,6 +81,7 @@ To process short-read 16S rRNA data from Illumina sequencing:
 4. Determine optimal trimming parameters for DADA2 with [Figaro](https://github.com/Zymo-Research/figaro)
 5. Amplicon sequence variant inference with [DADA2](https://github.com/benjjneb/dada2)
 
+PS: At the moment, the DECIPHER database link is broken. We will update it once it is working again.
 
 Basic usage:
 ```sh
