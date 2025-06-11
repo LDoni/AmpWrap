@@ -207,6 +207,7 @@ dependencies:
   - openblas=0.3.29=pthreads_h6ec200e_0
   - openjdk=11.0.1=h516909a_1016
   - openssl=3.5.0=h7b32b05_1
+  - osfclient=0.0.5=pyh44b312d_0
   - pandas=2.2.3=py39h3b40f6f_2
   - pango=1.50.14=ha41ecd1_2
   - paramiko=3.5.1=pyhd8ed1ab_0
@@ -326,6 +327,7 @@ dependencies:
   - rpds-py=0.25.1=py39h20260ba_0
   - rsa=4.9.1=pyhd8ed1ab_0
   - s3transfer=0.13.0=pyhd8ed1ab_0
+  - seqkit=2.10.0=h9ee0642_0
   - setuptools=75.8.2=pyhff2d567_0
   - shellingham=1.5.4=pyhd8ed1ab_1
   - six=1.17.0=pyhd8ed1ab_0
@@ -345,12 +347,12 @@ dependencies:
   - tomli=2.2.1=pyhd8ed1ab_1
   - tomlkit=0.13.2=pyha770c72_1
   - toposort=1.10=pyhd8ed1ab_1
+  - tqdm=4.67.1=py39h2f386ee_0
   - traitlets=5.14.3=pyhd8ed1ab_1
   - typer=0.16.0=pyh167b9f4_0
   - typer-slim=0.16.0=pyhe01879c_0
   - typer-slim-standard=0.16.0=hf964461_0
   - typing-inspection=0.4.1=pyhd8ed1ab_0
-  - typing_extensions=4.14.0=pyhe01879c_0
   - tzdata=2025a=h78e105d_0
   - ubiquerg=0.8.0=pyhd8ed1ab_0
   - uritemplate=4.2.0=pyhd8ed1ab_0
@@ -414,8 +416,6 @@ dependencies:
       - scipy==1.13.1
       - spectra==0.1.0
       - tiktoken==0.9.0
-      - tqdm==4.67.1
       - typeguard==4.4.2
       - typing-extensions==4.12.2
       - urllib3==2.3.0
-prefix: /home/lapo/miniconda3/envs/ampwrap
