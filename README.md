@@ -31,10 +31,11 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 ```
 
 Run the installation script:
+and remember to Init conda (final yes!)
 ```sh
 bash ~/Miniconda3-latest-Linux-x86_64.sh
 ```
-Init the shell (final yes!)
+
 ```
 source ~/.bash_profile || source ~/.bashrc
 ```
@@ -46,7 +47,6 @@ rm -rf ~/Miniconda3-latest-Linux-x86_64.sh
 
 ### Install Mamba
 Mamba is a faster alternative to Conda for package management. Install it with:
-
 ```sh
 conda install -n base -c conda-forge mamba
 ```
@@ -65,24 +65,37 @@ conda activate ampwrap
 ```
 
 
-## Usage
-
+## General Usage
+```sh
+ampwrap --help
+```
 ### AmpWrap for Short Reads (Illumina)
-To process short-read 16S rRNA data from Illumina sequencing, use:
+To process short-read 16S rRNA data from Illumina sequencing:
 
 Basic usage:
 ```sh
-ampwrap illumina -i input_directory -a forward_primer -A reverse_primer -l amplicon_length
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon_length
 ```
 PS: Don't use it on multiple sequencing runs. If you want to analyze different runs, it's better to merge the DADA2 outputs after DADA2.
+
+## Short reads Test Usage
+You can use a small toy sequencing run to test ampwrap
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon_length
+```
+If the test goes smoothly you are ready to analyze your data
 
 ### AmpWrap for Long Reads (Nanopore)
 For long-read 16S rRNA data from Nanopore sequencing, use:
 
 ```sh
-ampwrap nanopore -i input_directory -o output_directory
+ampwrap long -i input_directory -o output_directory
 ```
-
+## Long reads Test Usage
+You can use a small toy sequencing run to test ampwrap
+```sh
+ampwrap long -i input_directory -o output_directory
+```
 Further implementations can be requested by opening a issue
 
 ## Illumina Workflow
@@ -95,10 +108,11 @@ Further implementations can be requested by opening a issue
 
 ## Nanopore Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-2. Primer removal with [Porechop](https://github.com/rrwick/Porechop). The use of **Porechop** is optional and depends on the `trimming_method` parameter in the config file.
-3. Filtering reads by length with [NanoFilt](https://github.com/wdecoster/nanofilt)
-4. Post-filtering quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-5. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
+2. Adapters removal with [Porechop](https://github.com/rrwick/Porechop) or [Porechop_ABI](https://github.com/bonsai-team/Porechop_ABI). The use of **Porechop** is optional and depends on the `--trimming` parameter.
+3. Primers removal with [Cutadapt](https://github.com/marcelm/cutadapt). The use of **Cutadapt** is optional and depends on the `--cutadapt-forward` and  `--cutadapt-reverse` parameters.
+4. Filtering reads by length and quality with [NanoFilt](https://github.com/wdecoster/nanofilt)
+5. Post-filtering quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
+6. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
 
 ## Troubleshooting
 If you encounter issues during installation or execution, check the following:
@@ -116,7 +130,6 @@ ampwrap short --help
 ```sh
 mamba install --force-reinstall conda-forge::pulp
 ```
-
 
 ### V3-V4 Analysis
 
