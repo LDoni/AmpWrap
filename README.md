@@ -73,6 +73,14 @@ ampwrap --help
 ```
 ### AmpWrap for Short Reads (Illumina)
 To process short-read 16S rRNA data from Illumina sequencing:
+##  Workflow
+1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
+2. Primer removal from sequencing reads with [Cutadapt](https://github.com/marcelm/cutadapt).
+       The *--discard-untrimmed* option is applied
+3. Post-cutadapt quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
+4. Determine optimal trimming parameters for DADA2 with [Figaro](https://github.com/Zymo-Research/figaro)
+5. Amplicon sequence variant inference with [DADA2](https://github.com/benjjneb/dada2)
+
 
 Basic usage:
 ```sh
@@ -89,7 +97,15 @@ If the test goes smoothly you are ready to analyze your data
 
 ### AmpWrap for Long Reads (Nanopore)
 For long-read 16S rRNA data from Nanopore sequencing, use:
+## Workflow
+1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
+2. Adapters removal with [Porechop](https://github.com/rrwick/Porechop) or [Porechop_ABI](https://github.com/bonsai-team/Porechop_ABI). The use of **Porechop** is optional and depends on the `--trimming` parameter.
+3. Primers removal with [Cutadapt](https://github.com/marcelm/cutadapt). The use of **Cutadapt** is optional and depends on the `--cutadapt-forward` and  `--cutadapt-reverse` parameters.
+4. Filtering reads by length and quality with [NanoFilt](https://github.com/wdecoster/nanofilt)
+5. Post-filtering quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
+6. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
 
+Basic usage:
 ```sh
 ampwrap long -i input_directory -o output_directory
 ```
@@ -98,23 +114,18 @@ You can use a small toy sequencing run to test ampwrap
 ```sh
 ampwrap long -i input_directory -o output_directory
 ```
+Then you can use the [EMU](https://github.com/treangenlab/emu), scripts to combine the frequency tables:
+```sh
+emu combine-outputs <directory_path> <rank>
+```
+
+
+
 Further implementations can be requested by opening a issue
 
-## Illumina Workflow
-1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-2. Primer removal from sequencing reads with [Cutadapt](https://github.com/marcelm/cutadapt).
-       The *--discard-untrimmed* option is applied
-3. Post-cutadapt quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-4. Determine optimal trimming parameters for DADA2 with [Figaro](https://github.com/Zymo-Research/figaro)
-5. Amplicon sequence variant inference with [DADA2](https://github.com/benjjneb/dada2)
 
-## Nanopore Workflow
-1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-2. Adapters removal with [Porechop](https://github.com/rrwick/Porechop) or [Porechop_ABI](https://github.com/bonsai-team/Porechop_ABI). The use of **Porechop** is optional and depends on the `--trimming` parameter.
-3. Primers removal with [Cutadapt](https://github.com/marcelm/cutadapt). The use of **Cutadapt** is optional and depends on the `--cutadapt-forward` and  `--cutadapt-reverse` parameters.
-4. Filtering reads by length and quality with [NanoFilt](https://github.com/wdecoster/nanofilt)
-5. Post-filtering quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-6. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
+
+
 
 ## Troubleshooting
 If you encounter issues during installation or execution, check the following:
