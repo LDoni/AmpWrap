@@ -69,15 +69,6 @@ def write_config_yaml(input_dir, output_dir, db_choice, rank, extension, sample_
         yaml.dump(config, f)
     return config_path
 
-#def run_snakemake(config_path,is_quiet=False):
-#    args = ["snakemake", "--configfile", config_path, "--cores", "all", "--nolock", "--snakefile", "snakefile.long"]
-#    if is_quiet: args += ["--quiet", "all"]
-#    try:
-#        subprocess.run(args, check=True)
-#    except subprocess.CalledProcessError as e:
-#        print(f"Error running Snakemake with config file '{config_path}': {e}")
-#        sys.exit(1)
-
 
 def run_snakemake(config_path, is_quiet=False):
     import os
@@ -160,20 +151,7 @@ def main():
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
-#    file_patterns = [ "*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
-#    files = [
-#        file
-#        for pattern in file_patterns
-#        for file in glob.glob(os.path.join(input_dir, pattern))
-#    ]
-#
-#    if not files:
-#        print("No matching files found in the input directory.")
-#        sys.exit(1)
-#
-#    sample_names = [os.path.splitext(os.path.basename(file))[0] for file in files]
 
-#    extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
 
 
 
