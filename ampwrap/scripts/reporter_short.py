@@ -45,6 +45,7 @@ report = f"""
 # Report file 
 Analysis started: {snakemake.params.start}
 Analysis ended: {snakemake.params.end}
+
 ## Primers
 Forward: {snakemake.params.forward_p} 
 Reverse: {snakemake.params.reverse_p}
