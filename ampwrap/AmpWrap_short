@@ -149,7 +149,7 @@ def main():
         "'dada2_silva_genus138' (DADA2 with SILVA 138, genus level), "
         "'dada2_RDP_genus19' (DADA2 with RDP, genus level), "
         "'dada2_GG2_genus09' (DADA2 with GreenGenes 09, genus level). "
-        "Default: 'decipher_silva138'."))   
+        "Default: 'dada2_silva_genus138'."))   
     parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
     try: args = parser.parse_args()
     except SystemExit:
