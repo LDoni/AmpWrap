@@ -1,9 +1,9 @@
 import os
 import glob
-
+import datetime
 
 # Directories and parameters
-start_time = os.system("date")
+start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
 sample_tab = config["sample_tab"]
@@ -402,7 +402,7 @@ rule reporter:
         forward_p = forward_primer,
         reverse_p = reverse_primer,
         start = start_time,
-        end = os.system("date"),
+        end = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         taxonomy_method = assign_taxonomy_method
     script:
         SCRIPT_PATHS['reporter']
