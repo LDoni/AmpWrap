@@ -74,7 +74,7 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
         "sample_tab": os.path.join(output_dir, "sample.tab"),
         "read": [1, 2],
         "sample": [f[1].split(".")[0] for f in metainfo],
-        "out_name": "SILVA_SSU_r138_2019.RData",
+        "out_name": "silva_nr99_v138.2_toGenus_trainset.fa.gz",
         "script": "script",
         "logs": "logs",
 	"file_extension": extension,
