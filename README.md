@@ -27,19 +27,21 @@ AmpWrap can be easily installed using GitHub + Conda or Mamba.
 To use Conda or Mamba, you first need to install Miniconda:
 
 ```sh
-mkdir -p ~/miniconda3
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 ```
 
 Run the installation script:
 ```sh
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+bash ~/Miniconda3-latest-Linux-x86_64.sh
+```
+Init the shell (final yes!)
+```
 source ~/.bash_profile || source ~/.bashrc
 ```
 
 After installation, remove the installer to free up space:
 ```sh
-rm -rf ~/miniconda3/miniconda.sh
+rm -rf ~/Miniconda3-latest-Linux-x86_64.sh
 ```
 
 ### Install Mamba
@@ -50,17 +52,18 @@ conda install -n base -c conda-forge mamba
 ```
 
 ### Install AmpWrap
-You can install AmpWrap using either Conda or Mamba:
+Install AmpWrap:
 
 ```sh
-conda install -c bioconda ampwrap
+git clone https://github.com/LDoni/AmpWrap.git
+
+cd AmpWrap/ampwrap/
+
+mamba env create -f ampwrap.yml
+
+conda activate ampwrap
 ```
 
-or using Mamba:
-
-```sh
-mamba install -c bioconda ampwrap
-```
 
 ## Usage
 
@@ -107,6 +110,11 @@ conda --help
 
 ```sh
 ampwrap short --help
+```
+
+### AttributeError: module 'pulp' has no attribute 'list_solvers'
+```sh
+mamba install --force-reinstall conda-forge::pulp
 ```
 
 
