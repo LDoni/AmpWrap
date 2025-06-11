@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+
+import argparse
+import glob
+import os
+import sys
+import yaml
+import subprocess
+import re
+
+
+
+
+def print_banner():
+    banner = """
+
+ █████╗ ███╗   ███╗██████╗                                                                  ██╗   
+██╔══██╗████╗ ████║██╔══██╗                                                                 ╚██╗  
+███████║██╔████╔██║██████╔╝█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗╚██╗ 
+██╔══██║██║╚██╔╝██║██╔═══╝ ╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝██╔╝ 
+██║  ██║██║ ╚═╝ ██║██║                                                                      ██╔╝  
+╚═╝  ╚═╝╚═╝     ╚═╝╚═╝                                                                      ╚═╝   
+                                                                                                  
+  ██╗                                                           ██╗    ██╗██████╗  █████╗ ██████╗ 
+ ██╔╝                                                           ██║    ██║██╔══██╗██╔══██╗██╔══██╗
+██╔╝█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗█████╗██║ █╗ ██║██████╔╝███████║██████╔╝
+╚██╗╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝╚════╝██║███╗██║██╔══██╗██╔══██║██╔═══╝ 
+ ╚██╗                                                           ╚███╔███╔╝██║  ██║██║  ██║██║     
+  ╚═╝                                                            ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     
+                                                                                                  
+
+
+
+"""
+    print(banner)
+
+    print(f"Welcome to ampwrap_long")
+
+
+
+
+
+
+
+
+def write_config_yaml(input_dir, output_dir, db_choice, rank, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, forward_primer, reverse_primer):
+    config = {
+        "input_dir": input_dir,
+        "output_dir": output_dir,
+        "tax_db": db_choice,
+        "rank": rank,
+        "script": "script",
+        "logs": "logs",
+        "file_extension": extension,
+        "sample_names": sample_names,
+        "threads": threads,
+        "nl_min_len": nl_min_len,
+	"nl_max_len": nl_max_len,
+	"nl_min_qual": nl_min_qual,
+	"emu_min_ab": emu_min_ab,
+        "forward_primer": forward_primer,
+        "reverse_primer": reverse_primer
+    }
+
+    if trimming != None: config["trimming_method"] = trimming
+
+    config_path = os.path.join(output_dir, "config.yaml")
+    with open(config_path, "w") as f:
+        yaml.dump(config, f)
+    return config_path
+
+#def run_snakemake(config_path,is_quiet=False):
+#    args = ["snakemake", "--configfile", config_path, "--cores", "all", "--nolock", "--snakefile", "snakefile.long"]
+#    if is_quiet: args += ["--quiet", "all"]
+#    try:
+#        subprocess.run(args, check=True)
+#    except subprocess.CalledProcessError as e:
+#        print(f"Error running Snakemake with config file '{config_path}': {e}")
+#        sys.exit(1)
+
+
+def run_snakemake(config_path, is_quiet=False):
+    import os
+    import subprocess
+    import sys
+    
+    conda_bin_dir = os.path.join(os.environ['CONDA_PREFIX'], 'bin')
+    snakefile_path = os.path.join(conda_bin_dir, 'snakefile.long')
+    print(f"Searching Snakefile in: {snakefile_path}")
+    if not os.path.exists(snakefile_path):
+        print(f"ERROR: snakefile.long not found in {conda_bin_dir}")
+        print("Check the paths:")
+        print(f"  ls {conda_bin_dir} | grep snakefile.long")
+        sys.exit(1)
+    
+    args = [
+        "snakemake",
+        "--configfile", config_path,
+        "--cores", "all",
+        "--nolock",
+        "--snakefile", snakefile_path
+    ]
+    
+    if is_quiet:
+        args += ["--quiet", "all"]
+    
+    print("Let's Go:", " ".join(args))
+    
+    try:
+        subprocess.run(args, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR in Snakemake: {e}")
+        sys.exit(1)
+
+
+
+
+
+
+
+
+
+
+
+
+def main():
+    print_banner()
+
+    parser = argparse.ArgumentParser(description="Process raw sequencing files for downstream analysis.")
+    parser.add_argument("-i", "--input-directory", required=True, help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
+    parser.add_argument("-o", "--output-directory", default=os.path.join(os.getcwd(), "ampwrap_long"), help="Specify the output directory (default: ./ampwrap_long_results)")
+    parser.add_argument("-tr", "--trimming", choices=["porechop", "porechop_abi"], default=None, required=False, help="Specify the method if you want to remove adapters")
+    parser.add_argument("-d", "--db-choice", choices=["rdp", "silva","emu"], default="emu", required=False, help="Specify the database choice for taxonomy assignment for EMU: silva, rdp or emu_db (default: emu)")
+    parser.add_argument("-r", "--rank",choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],default="species", help="Taxonomic rank for final output")
+    parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
+    parser.add_argument("-t", "--threads", default=os.cpu_count(), help="Number of threads")
+    parser.add_argument("--nl-min-len",default=1200,help="Filter amplicons on a minimum read length")
+    parser.add_argument("--nl-max-len",default=1800,help="Filter amplicons on a maximum read length")
+    parser.add_argument("--nl-min-qual",default=10,help="Filter on a minimum average read quality score")
+    parser.add_argument("--emu-min-ab",default=0.0001,help="Filter species with relative abundance below threshold; .01 = 1 percent")
+    parser.add_argument("--cutadapt-forward",help="Forward primer sequence to trim it with cutadapt")
+    parser.add_argument("--cutadapt-reverse",help="Reverse primer sequence to trim it with cutadapt")
+
+    try: args = parser.parse_args()
+    except SystemExit:
+        #parser.print_usage()
+        sys.exit(0)
+
+    input_dir = args.input_directory
+    output_dir = args.output_directory
+    nl_min_len = args.nl_min_len
+    nl_max_len = args.nl_max_len
+    nl_min_qual = args.nl_min_qual
+    emu_min_ab = args.emu_min_ab
+    is_quiet = args.quiet
+    reverse_primer = args.cutadapt_reverse
+    forward_primer = args.cutadapt_forward
+
+
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+#    file_patterns = [ "*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
+#    files = [
+#        file
+#        for pattern in file_patterns
+#        for file in glob.glob(os.path.join(input_dir, pattern))
+#    ]
+#
+#    if not files:
+#        print("No matching files found in the input directory.")
+#        sys.exit(1)
+#
+#    sample_names = [os.path.splitext(os.path.basename(file))[0] for file in files]
+
+#    extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
+
+
+
+    file_patterns = ["*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
+    files = []
+    matched_patterns = []
+
+# Trova i file e memorizza i pattern corrispondenti
+    for pattern in file_patterns:
+        matched_files = glob.glob(os.path.join(input_dir, pattern))  # Questa linea deve essere indentata
+        if matched_files:  # Anche questa linea deve essere indentata
+            files.extend(matched_files)
+            matched_patterns.extend([pattern] * len(matched_files))  # E questa deve essere indentata
+
+# Se non sono stati trovati file, esci
+    if not files:
+        print("No matching files found in the input directory.")
+        sys.exit(1)
+
+# Estrai l'estensione dal primo pattern corrispondente (rimuovi l'asterisco)
+  #  extension = matched_patterns[0][1:]  # Rimuove il "*" all'inizio
+    extension = matched_patterns[0].split('.')[-1]
+# Crea i nomi dei campioni
+    sample_names = [os.path.splitext(os.path.basename(file))[0] for file in files]
+
+
+
+
+
+
+
+
+
+    config_path = write_config_yaml(
+        input_dir, output_dir,  args.db_choice, args.rank, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, reverse_primer, forward_primer
+    )
+    run_snakemake(config_path)
+
+if __name__ == "__main__":
+    main()

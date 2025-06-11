@@ -1,0 +1,408 @@
+import os
+import glob
+
+
+# Directories and parameters
+start_time = os.system("date")
+input_dir = config["input_dir"]
+output_dir = config["output_dir"]
+sample_tab = config["sample_tab"]
+file_extension = config["file_extension"]
+db_dir = config.get("db_dir","db_s")
+forward_primer = config["forward_primer"]
+reverse_primer = config["reverse_primer"]
+amplicon_length = config["amplicon_length"]
+files = config["sample"]
+threads = config.get("threads",os.cpu_count())
+figaroname = "fvieira"
+
+
+# Configurazione percorsi script
+CONDA_BIN = os.path.join(os.environ.get('CONDA_PREFIX', ''), 'bin')
+SCRIPTS_DIR = os.path.join(CONDA_BIN, 'scripts') if os.path.exists(os.path.join(CONDA_BIN, 'scripts')) else 'scripts'
+
+# Definizione percorsi assoluti per tutti gli script
+SCRIPT_PATHS = {
+    'figaro': os.path.join(SCRIPTS_DIR, 'figaro/figaro/figaro.py'),
+    'dada2_filter': os.path.join(SCRIPTS_DIR, 'dada2_filter.R'),
+    'dada2_learn_errors': os.path.join(SCRIPTS_DIR, 'dada2_learn_errors.R'),
+    'dada2_infer_asvs': os.path.join(SCRIPTS_DIR, 'dada2_infer_asvs.R'),
+    'dada2_remove_chimeras': os.path.join(SCRIPTS_DIR, 'dada2_remove_chimeras.R'),
+    'dada2_assign_taxonomy': os.path.join(SCRIPTS_DIR, 'dada2_assign_taxonomy.R'),
+    'dada2_assign_taxonomy2': os.path.join(SCRIPTS_DIR, 'dada2_assign_taxonomy2.R'),
+    'track_reads': os.path.join(SCRIPTS_DIR, 'track_reads.R'),
+    'reporter': os.path.join(SCRIPTS_DIR, 'reporter_short.py')
+}
+
+# Verifica che gli script esistano
+for name, path in SCRIPT_PATHS.items():
+    if not os.path.exists(path):
+        raise RuntimeError(f"Script {name} not found at {path}")
+
+# Parse sample_tab
+def sampleInfos(sample_config):
+        d = {}
+        for i,l in enumerate(open(sample_config)):
+               # print(l)
+                if l.startswith("#"): continue
+                sample,index,file,filenaming = l.strip().split()
+                if not index.lower().startswith("r"): index = f"r{index}"
+                d[sample] = d.get(sample,[])
+                d[sample].append((file,index,filenaming))
+        return d
+
+sample_d = sampleInfos(sample_tab)
+samples = sample_d.keys()
+indices = [1,2]
+
+# Compute primer lengths
+forward_primer_length = len(forward_primer)
+reverse_primer_length = len(reverse_primer)
+
+# Create SymLinks
+def rename_samples(samples):
+    # get sample names compatible for FVieira format
+    renamed_dict = {}
+    seen_names = set()
+    for sample in samples:
+        new_name = sample.replace("_", "-")  # Sostituisce "_" con "-"
+        base_name = new_name
+        counter = 1
+        while new_name in seen_names:
+            new_name = f"{base_name}-{counter}"
+            counter += 1
+        renamed_dict[sample] = new_name
+        seen_names.add(new_name)
+    return renamed_dict
+
+sample_renamed_dict = rename_samples(sample_d.keys()) 
+renamed_samples2files = {}
+for sample,infos in sample_d.items():
+    renamed_sample = sample_renamed_dict[sample]
+    renamed_samples2files[renamed_sample] = renamed_samples2files.get(renamed_sample,{})
+    for i in infos:
+        f,index = i[0],i[1]
+        renamed_samples2files[renamed_sample][index] = f
+
+# tax db
+assign_taxonomy_method = config["assign_taxonomy_method"]   
+out_name = config.get("db_name",
+                {
+                    "dada2_silva_genus138": "silva_nr99_v138_train_set.fa.gz",
+                    "dada2_RDP_genus19": "rdp_train_set_19.fa.gz",
+                    "dada2_GG2_genus09": "gg_13_5_train_set.fa.gz",
+                    "decipher_silva138": "SILVA_SSU_r138_2019.RData"
+                }.get(assign_taxonomy_method))
+
+# functions for inputs
+def getReadFiles(wildcards,d=sample_d):
+    #print([i[0] for i in d[wildcards.sample]])
+    return [i[0] for i in d[wildcards.sample]]
+
+def getReadFilesDict(wildcards,d=sample_d):
+    out = {i[1].lower():i[0] for i in d[wildcards.sample]}
+    #print(out)
+    return out
+
+
+rule all:
+    input:
+        # figaro input
+        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension),
+        # FastQC initial
+        expand(f"{config['output_dir']}/QC/raw_qc_initial/{{file}}_fastqc.html", file=files),
+        f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
+        # Cutadapt 
+        expand(f"{config['output_dir']}/intermediate/cutadapt/{{sample}}_trimmed_R{{index}}.fq.gz", sample=samples, index=indices),
+        expand(f"{config['output_dir']}/QC/raw_qc_post_cutadapt/{{sample}}_trimmed_R{{index}}_fastqc.html", sample=samples, index=indices),
+        f"{config['output_dir']}/QC/raw_qc_post_cutadapt/multiqc_report.html",
+        f"{config['output_dir']}/intermediate/figaro/trimParameters.json",
+        f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt",
+        # DADA2 
+        expand(f"{config['output_dir']}/intermediate/dada2_filtered/{{sample}}_R{{index}}_filtered.fq.gz", sample=samples, index=indices),
+        f"{config['output_dir']}/intermediate/dada2_error_learning/err_forward_reads.rds",
+        f"{config['output_dir']}/intermediate/dada2_error_learning/err_reverse_reads.rds",
+        f"{config['output_dir']}/intermediate/merged_asvs.rds",
+        f"{config['output_dir']}/intermediate/no_chimera_asvs.rds",
+        f"{db_dir}/dada2/{out_name}",
+        #f"{db_dir}/dada2/silva_species_assignment_v138.fa.gz" if species_db != "", 
+        f"{config['output_dir']}/results/ASVs.fa",
+        f"{config['output_dir']}/results/ASVs_counts.tsv",
+        f"{config['output_dir']}/results/ASVs_taxonomy.tsv",
+        f"{config['output_dir']}/results/read-count-tracking.tsv",
+        f"{config['output_dir']}/results/final_report.txt"
+
+
+rule input_symlink:
+    input: renamed_samples2files[renamed_sample][index]
+    output: f"{output_dir}/figaro_inp/{{sample}}_R{{index}}.{{extension}}"
+    run:
+        import os
+        os.makedirs(f"{output_dir}/figaro_inp",exist_ok=True)
+        src,target = os.path.abspath(str(input)),os.path.abspath(str(output))
+        print(src,target)
+        try: os.symlink(src, target)
+        except Exception as E: print(E); raise Error
+
+rule fastqc_initial:
+    input:
+        f"{input_dir}/{{file}}.{file_extension}"
+    output:
+        "{output_dir}/QC/raw_qc_initial/{file}_fastqc.html"
+    threads: threads
+    shell:
+        """
+        mkdir -p {output_dir}/QC/raw_qc_initial
+        fastqc {input} -o $(dirname {output}) -t {threads} > /dev/null 2>&1 
+        """
+
+rule multiqc_initial:
+    input: expand("{output_dir}/QC/raw_qc_initial/{file}_fastqc.html", output_dir=output_dir,file=files)
+    output: f"{output_dir}/QC/raw_qc_initial/multiqc_report.html"
+    threads: threads
+    shell:
+        """
+        multiqc $(dirname {output}) -o $(dirname {output}) > /dev/null 2>&1
+        """
+
+
+rule cutadapt:
+    input:
+        unpack(getReadFilesDict)
+    output:
+        r1_trimmed = "{output_dir}/intermediate/cutadapt/{sample}_trimmed_R1.fq.gz",
+        r2_trimmed = "{output_dir}/intermediate/cutadapt/{sample}_trimmed_R2.fq.gz"
+    log:
+        "{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log"
+    params:
+        forward_primer = forward_primer,
+        reverse_primer = reverse_primer,
+    shell:
+        """
+        mkdir -p {output_dir}/intermediate/cutadapt
+        cutadapt -g "^{params.forward_primer}" -G "^{params.reverse_primer}" --discard-untrimmed \
+                 -o {output.r1_trimmed} -p {output.r2_trimmed} \
+                 {input.r1} {input.r2} > {log}
+        """
+
+rule combine_cutadapt_logs:
+    input: expand("{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log", output_dir=output_dir, sample=samples)
+    output: f"{output_dir}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
+    log: f"{output_dir}/intermediate/cutadapt/combined_cutadapt.log"
+    shell: 
+         f"""
+        cat {{input}} > {{output}}
+        echo -e "sample\treads retained\tbps retained" > {{log}}
+        paste <(echo {" ".join(list(samples))} | tr " " "\n") <(grep "passing" {{output}} | cut -f3 -d "(" | tr -d ")") <(grep "filtered" {{output}} | cut -f3 -d "(" | tr -d ")") >> {{log}}
+        cat {{log}}
+        mkdir -p "{output_dir}/QC/raw_qc_post_cutadapt/"
+        mv {{input}} "{output_dir}/QC/raw_qc_post_cutadapt/"
+         """
+
+
+rule fastqc_post_cutadapt:
+    input:
+        trimmed_files = "{output_dir}/intermediate/cutadapt/{sample}_trimmed_R{index}.fq.gz"
+    output:
+        fastqc = "{output_dir}/QC/raw_qc_post_cutadapt/{sample}_trimmed_R{index}_fastqc.html"
+    threads: 15
+    shell:
+        """
+        mkdir -p {output_dir}/QC/raw_qc_post_cutadapt
+        fastqc {input.trimmed_files} -o $(dirname {output}) -t {threads}  > /dev/null 2>&1 
+        """
+
+
+rule multiqc_final:
+    input: expand("{output_dir}/QC/raw_qc_post_cutadapt/{sample}_trimmed_R{index}_fastqc.html", output_dir=output_dir,sample=samples,index=indices)
+    output: f"{output_dir}/QC/raw_qc_post_cutadapt/multiqc_report.html"
+    threads: threads
+    shell:
+        """
+        multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1
+        """
+
+
+rule figaro:
+    input:
+        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension)
+    output:
+        trimParameters= config["output_dir"] + "/intermediate/figaro/trimParameters.json"
+    params:
+        amplen = amplicon_length,
+        forward_primer_length = forward_primer_length,
+        reverse_primer_length = reverse_primer_length,
+        input_dir = f"{output_dir}/figaro_inp",
+        figaroname = figaroname,
+        figaro_script = SCRIPT_PATHS['figaro']
+    shell:
+        """
+        mkdir -p {output_dir}/intermediate/figaro
+        {params.figaro_script}  -i {params.input_dir} -o {output_dir}/intermediate/figaro -a {params.amplen} \
+               -f {params.forward_primer_length} -r {params.reverse_primer_length} -F {params.figaroname}  > /dev/null 2>&1
+        """
+
+rule dada2_filter:
+    input:
+        figaro_params=f"{output_dir}/intermediate/figaro/trimParameters.json"
+    output:
+        filtered_files=expand(
+            f"{output_dir}/intermediate/dada2_filtered/{{sample}}_R{{index}}_filtered.fq.gz",
+            sample=samples,
+            index=indices),
+        checkout=f"{output_dir}/intermediate/dada2_filtered/checkout.filter"
+    params:
+        filter_script = SCRIPT_PATHS['dada2_filter']
+    shell:
+        """
+        mkdir -p {output_dir}/intermediate/dada2_filtered
+        Rscript {params.filter_script} \
+        {output_dir}/intermediate/cutadapt {output_dir}/intermediate/dada2_filtered {input.figaro_params}
+
+    touch {output.checkout}
+        """
+
+rule dada2_error_learning:
+    input:
+        f"{output_dir}/intermediate/dada2_filtered/checkout.filter"
+    output:
+        expand("{output_dir}/intermediate/dada2_error_learning/err_{direction}_reads.rds", output_dir=output_dir,direction=["forward", "reverse"])
+    params:
+        learn_script = SCRIPT_PATHS['dada2_learn_errors']
+    shell:
+        """
+        mkdir -p {output_dir}/intermediate/dada2_error_learning
+        Rscript {params.learn_script} \
+        {output_dir}/intermediate/dada2_filtered {output_dir}/intermediate/dada2_error_learning
+        """
+
+rule dada2_infer_asvs:
+    input:
+        err_fwd= "{output_dir}/intermediate/dada2_error_learning/err_forward_reads.rds",
+        err_rev= "{output_dir}/intermediate/dada2_error_learning/err_reverse_reads.rds"
+    output:
+        merged_asvs = "{output_dir}/intermediate/merged_asvs.rds"
+    params:
+        infer_script = SCRIPT_PATHS['dada2_infer_asvs']
+    shell:
+        """
+        Rscript {params.infer_script} {output_dir}/intermediate/dada2_filtered {input.err_fwd} {input.err_rev} {output.merged_asvs}
+        """
+
+rule dada2_remove_chimeras:
+    input:
+        merged_asvs= config["output_dir"] + "/intermediate/merged_asvs.rds"
+    output:
+        no_chimera_asvs = config["output_dir"] + "/intermediate/no_chimera_asvs.rds"
+    params:
+        chimera_script = SCRIPT_PATHS['dada2_remove_chimeras']
+    shell:
+        """
+        Rscript {params.chimera_script} {input.merged_asvs} {output.no_chimera_asvs}
+        """
+
+rule download_dada2_db:
+    output:
+        dada2_db=f"{db_dir}/dada2/{out_name}"
+    params:
+        method=assign_taxonomy_method
+    shell:
+        """
+        DB_DIR="$(dirname {output.dada2_db})"
+        DB_PATH={output.dada2_db}
+
+        # Ensure the directory exists
+        mkdir -p "$DB_DIR"
+
+        # Check the taxonomy method and download the corresponding database
+        if [ "{params.method}" == "decipher_silva138" ]; then
+            DB_URL="http://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2019.RData"
+            DB_FILENAME="SILVA_SSU_r138_2019.RData"
+        elif [ "{params.method}" == "dada2_silva_genus138" ]; then
+            DB_URL="https://zenodo.org/records/14169026/files/silva_nr99_v138.2_toGenus_trainset.fa.gz"
+            DB_FILENAME="silva_nr99_v138.2_toGenus_trainset.fa.gz"
+         elif [ "{params.method}" == "dada2_RDP_genus19" ]; then
+            DB_URL="https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz"
+            DB_FILENAME="rdp_19_toGenus_trainset.fa.gz"
+        elif [ "{params.method}" == "dada2_GG2_genus09" ]; then
+            DB_URL="https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz"
+            DB_FILENAME="gg2_2024_09_toGenus_trainset.fa.gz"
+        else
+        echo " Error Error Error Error"
+        echo "----------------------------------------------------------"
+        echo "| Database Name             | Database Type | Version   |"
+        echo "----------------------------------------------------------"
+        echo "| decipher_silva138         | Silva         | 138       |"
+        echo "| dada2_silva_genus138      | Silva         | 138       |"
+        echo "| dada2_RDP_genus19         | RDP           | 19        |"
+        echo "| dada2_GG2_genus09         | GreenGenes    | 09        |"
+        echo "----------------------------------------------------------"
+
+
+            exit 1
+        fi
+
+        # Download the database if it doesn't already exist
+            echo "Downloading $DB_FILENAME..."
+            wget -O "$DB_PATH" "$DB_URL"
+            if [ $? -eq 0 ]; then
+                echo "$DB_FILENAME downloaded successfully."
+            else
+                echo "Error downloading $DB_FILENAME."
+                exit 1
+            fi
+        """
+
+rule dada2_assign_taxonomy:
+    input:
+        no_chimera_asvs= config["output_dir"] + "/intermediate/no_chimera_asvs.rds",
+        db=f"{db_dir}/dada2/{out_name}"
+    output:
+        asvs="{output_dir}/results/ASVs.fa",
+        asvs_counts="{output_dir}/results/ASVs_counts.tsv",
+        taxonomy="{output_dir}/results/ASVs_taxonomy.tsv",
+    params:
+        method=assign_taxonomy_method,
+        tax_script1 = SCRIPT_PATHS['dada2_assign_taxonomy'],
+        tax_script2 = SCRIPT_PATHS['dada2_assign_taxonomy2']
+    shell:
+       """
+       if [[ {params.method} == "decipher_silva138" ]]; then
+           Rscript {params.tax_script2} {input.no_chimera_asvs} {input.db} {output_dir}/results
+       elif [[ {params.method} == "dada2_silva_genus138" || {params.method} == "dada2_RDP_genus19" || {params.method} == "dada2_GG2_genus09" ]]; then
+           Rscript {params.tax_script1} {input.no_chimera_asvs} {input.db} {output_dir}/results
+       else
+           echo "Error: method not valid. Choose among 'decipher_silva138', 'dada2_silva_genus138', 'dada2_RDP_genus19', or 'dada2_GG2_genus09'."
+           exit 1
+       fi
+       """
+rule track_reads:
+    input:
+        merged_asvs=config["output_dir"] + "/intermediate/merged_asvs.rds",
+        no_chimera_asvs=config["output_dir"] + "/intermediate/no_chimera_asvs.rds"
+    output:
+        track_reads=config["output_dir"] + "/results/read-count-tracking.tsv"
+    params:
+        track_script = SCRIPT_PATHS['track_reads']
+    shell:
+        """
+        Rscript {params.track_script} \
+        {output_dir}/intermediate/dada2_filtered/filter_summary.tsv {output_dir}/intermediate/dada_fwd.rds \
+        {output_dir}/intermediate/dada_rev.rds {input.merged_asvs} {input.no_chimera_asvs} {output.track_reads}
+        """
+
+rule reporter:
+    input:
+        cutadapt = f"{config['output_dir']}/intermediate/cutadapt/combined_cutadapt.log",
+        dada2 = f"{config['output_dir']}/results/read-count-tracking.tsv",
+        figaro_json = f"{config['output_dir']}/intermediate/figaro/trimParameters.json"
+    output: 
+        report = f"{config['output_dir']}/results/final_report.txt"
+    params:
+        forward_p = forward_primer,
+        reverse_p = reverse_primer,
+        start = start_time,
+        end = os.system("date"),
+        taxonomy_method = assign_taxonomy_method
+    script:
+        SCRIPT_PATHS['reporter']
