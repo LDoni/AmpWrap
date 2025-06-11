@@ -62,6 +62,8 @@ cd AmpWrap/ampwrap/
 mamba env create -f ampwrap.yml
 
 conda activate ampwrap
+
+bash setup.sh
 ```
 
 
