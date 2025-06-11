@@ -43,12 +43,11 @@ def print_banner():
 
 
 
-def write_config_yaml(input_dir, output_dir, db_choice, rank, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, forward_primer, reverse_primer):
+def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, forward_primer, reverse_primer):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
         "tax_db": db_choice,
-        "rank": rank,
         "script": "script",
         "logs": "logs",
         "file_extension": extension,
@@ -122,7 +121,6 @@ def main():
     parser.add_argument("-o", "--output-directory", default=os.path.join(os.getcwd(), "ampwrap_long"), help="Specify the output directory (default: ./ampwrap_long_results)")
     parser.add_argument("-tr", "--trimming", choices=["porechop", "porechop_abi"], default=None, required=False, help="Specify the method if you want to remove adapters")
     parser.add_argument("-d", "--db-choice", choices=["rdp", "silva","emu"], default="emu", required=False, help="Specify the database choice for taxonomy assignment for EMU: silva, rdp or emu_db (default: emu)")
-    parser.add_argument("-r", "--rank",choices=['species', 'genus', 'family', 'order', 'class', 'phylum', 'superkingdom'],default="species", help="Taxonomic rank for final output")
     parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
     parser.add_argument("-t", "--threads", default=os.cpu_count(), help="Number of threads")
     parser.add_argument("--nl-min-len",default=1200,help="Filter amplicons on a minimum read length")
@@ -186,7 +184,7 @@ def main():
 
 
     config_path = write_config_yaml(
-        input_dir, output_dir,  args.db_choice, args.rank, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, reverse_primer, forward_primer
+        input_dir, output_dir,  args.db_choice, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, reverse_primer, forward_primer
     )
     run_snakemake(config_path)
 
