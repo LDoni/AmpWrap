@@ -157,22 +157,22 @@ def main():
     files = []
     matched_patterns = []
 
-# Trova i file e memorizza i pattern corrispondenti
-    for pattern in file_patterns:
-        matched_files = glob.glob(os.path.join(input_dir, pattern))  # Questa linea deve essere indentata
-        if matched_files:  # Anche questa linea deve essere indentata
-            files.extend(matched_files)
-            matched_patterns.extend([pattern] * len(matched_files))  # E questa deve essere indentata
 
-# Se non sono stati trovati file, esci
+    for pattern in file_patterns:
+        matched_files = glob.glob(os.path.join(input_dir, pattern))  
+        if matched_files:  
+            files.extend(matched_files)
+            matched_patterns.extend([pattern] * len(matched_files)) 
+
+
     if not files:
         print("No matching files found in the input directory.")
         sys.exit(1)
 
-# Estrai l'estensione dal primo pattern corrispondente (rimuovi l'asterisco)
-  #  extension = matched_patterns[0][1:]  # Rimuove il "*" all'inizio
+
+   
     extension = matched_patterns[0].split('.')[-1]
-# Crea i nomi dei campioni
+
     sample_names = [os.path.splitext(os.path.basename(file))[0] for file in files]
 
 
