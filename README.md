@@ -97,7 +97,7 @@ PS: Don't use it on multiple sequencing runs. If you want to analyze different r
 ## Short reads Test Usage
 You can use a small toy sequencing run to test ampwrap
 ```sh
-bash ~/AmpWrap/test/test_short.sh
+bash AmpWrap/test/test_short.sh
 ```
 If the test goes smoothly you are ready to analyze your data
 
