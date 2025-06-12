@@ -118,7 +118,7 @@ ampwrap long -i input_directory -o output_directory
 ## Long reads Test Usage
 You can use a small toy sequencing run to test ampwrap
 ```sh
-ampwrap long -i ~/AmpWrap/test/long_reads/ -o ~/output_test
+bash AmpWrap/test/test_long.sh
 ```
 Then you can use the [EMU](https://github.com/treangenlab/emu), scripts to combine the frequency tables:
 ```sh
