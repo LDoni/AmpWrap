@@ -89,7 +89,7 @@ PS: Don't use it on multiple sequencing runs. If you want to analyze different r
 ## Short reads Test Usage
 You can use a small toy sequencing run to test ampwrap
 ```sh
-ampwrap short -i ~/AmpWrap/test/short_reads -a CCTACGGGNGGCWGCAG -A GGACTACHVGGGTATCTAATCC -l 426
+ampwrap short -i ~/AmpWrap/test/short_reads -a CCTACGGGNGGCWGCAG -A GGACTACHVGGGTATCTAATCC -l 406
 ```
 If the test goes smoothly you are ready to analyze your data
 
