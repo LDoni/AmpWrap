@@ -55,9 +55,15 @@ Install AmpWrap:
 git clone https://github.com/LDoni/AmpWrap.git
 
 cd AmpWrap/ampwrap/
-
+```
+```sh
+mamba env create -f ampwrap.yml
+```
+or
+```sh
 conda env create -f ampwrap.yml
-
+```
+```sh
 conda activate ampwrap
 
 bash setup.sh
