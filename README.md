@@ -56,7 +56,7 @@ git clone https://github.com/LDoni/AmpWrap.git
 
 cd AmpWrap/ampwrap/
 
-mamba env create -f ampwrap.yml
+conda env create -f ampwrap.yml
 
 conda activate ampwrap
 
@@ -139,7 +139,7 @@ ampwrap short --help
 
 ### AttributeError: module 'pulp' has no attribute 'list_solvers'
 ```sh
-mamba install --force-reinstall conda-forge::pulp
+conda install --force-reinstall conda-forge::pulp
 ```
 
 ### V3-V4 Analysis
