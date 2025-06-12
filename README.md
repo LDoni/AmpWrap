@@ -56,6 +56,8 @@ git clone https://github.com/LDoni/AmpWrap.git
 
 cd AmpWrap/ampwrap/
 ```
+Build up the environment
+
 ```sh
 mamba env create -f ampwrap.yml
 ```
