@@ -17,11 +17,11 @@ threads = config.get("threads",os.cpu_count())
 figaroname = "fvieira"
 
 
-# Configurazione percorsi script
+
 CONDA_BIN = os.path.join(os.environ.get('CONDA_PREFIX', ''), 'bin')
 SCRIPTS_DIR = os.path.join(CONDA_BIN, 'scripts') if os.path.exists(os.path.join(CONDA_BIN, 'scripts')) else 'scripts'
 
-# Definizione percorsi assoluti per tutti gli script
+
 SCRIPT_PATHS = {
     'figaro': os.path.join(SCRIPTS_DIR, 'figaro/figaro/figaro.py'),
     'dada2_filter': os.path.join(SCRIPTS_DIR, 'dada2_filter.R'),
@@ -34,12 +34,12 @@ SCRIPT_PATHS = {
     'reporter': os.path.join(SCRIPTS_DIR, 'reporter_short.py')
 }
 
-# Verifica che gli script esistano
+
 for name, path in SCRIPT_PATHS.items():
     if not os.path.exists(path):
         raise RuntimeError(f"Script {name} not found at {path}")
 
-# Parse sample_tab
+
 def sampleInfos(sample_config):
         d = {}
         for i,l in enumerate(open(sample_config)):
@@ -65,7 +65,7 @@ def rename_samples(samples):
     renamed_dict = {}
     seen_names = set()
     for sample in samples:
-        new_name = sample.replace("_", "-")  # Sostituisce "_" con "-"
+        new_name = sample.replace("_", "-")
         base_name = new_name
         counter = 1
         while new_name in seen_names:
