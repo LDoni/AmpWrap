@@ -83,7 +83,7 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
     config_path = os.path.join(output_dir, "config.yaml")
     with open(config_path, "w") as f:
         yaml.dump(config, f)
-    #print(f"Config file written to {config_path}")
+    
     return config_path
 
 
