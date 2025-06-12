@@ -237,7 +237,7 @@ rule figaro:
     shell:
         """
         mkdir -p {output_dir}/intermediate/figaro
-        {params.figaro_script}  -i {params.input_dir} -o {output_dir}/intermediate/figaro -a {params.amplen} \
+        python3.8 {params.figaro_script}  -i {params.input_dir} -o {output_dir}/intermediate/figaro -a {params.amplen} \
                -f {params.forward_primer_length} -r {params.reverse_primer_length} -F {params.figaroname}  > /dev/null 2>&1
         """
 
