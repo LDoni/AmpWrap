@@ -215,12 +215,12 @@ rule seqkit_stats_post_qc:
 
 rule emu_database:
     output:
-        the_dir=directory(f"{db_dir}"),  # Directory target
+        the_dir=directory(f"{db_dir}"),  
         taxonomy=f"{db_dir}/taxonomy.tsv",
         taxids=f"{db_dir}/species_taxid.fasta"
     shell:
         f"""
-        mkdir -p {{output.the_dir}}  # Crea la cartella target
+        mkdir -p {{output.the_dir}}  
         osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_dir}/{tax_db}.tar  
         tar -xvf {db_dir}/{tax_db}.tar -C {{output.the_dir}} > /dev/null 2>&1  
         """
