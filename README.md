@@ -99,6 +99,13 @@ You can use a small toy sequencing run to test ampwrap
 ```sh
 bash AmpWrap/test/test_short.sh
 ```
+
+## Real 16S rRNA data V4V5 Test Usage
+You can use a small true sequencing run to test ampwrap
+```sh
+test_real_short_data.sh
+```
+
 If the test goes smoothly you are ready to analyze your data
 
 ### AmpWrap for Long Reads (Nanopore)
