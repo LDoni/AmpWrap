@@ -1,0 +1,10 @@
+mkdir -p real_short_data_test
+
+wget --no-check-certificate 'https://drive.usercontent.google.com/download?export=download&id=1h4dye79kdWmMIz7KOBcrwRaIeNKbmumQ&confirm=t' -O real_short_data_test/Sample1_R1.fastq.gz
+wget --no-check-certificate 'https://drive.usercontent.google.com/download?export=download&id=1Kwd_PSOlWbu4Ee94Y5EcMX8hiEhLDvn7&confirm=t' -O real_short_data_test/Sample1_R2.fastq.gz
+wget --no-check-certificate 'https://drive.usercontent.google.com/download?export=download&id=1suwvoUOuzmw-QBkH2BRjku_FUsG5eAuX&confirm=t' -O real_short_data_test/Sample2_R1.fastq.gz
+wget --no-check-certificate 'https://drive.usercontent.google.com/download?export=download&id=1oOEFRb8ZQQO2mt4o51LUBWzrDNs9IdL_&confirm=t' -O real_short_data_test/Sample2_R2.fastq.gz
+ 
+ ampwrap short -i real_short_data_test -a GTGYCAGCMGCCGCGGTAA -A CCGYCAATTYMTTTRAGTTT -l 372 --real_short_data_test_output 
+
+ 
