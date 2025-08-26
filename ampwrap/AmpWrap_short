@@ -33,6 +33,27 @@ def print_banner():
 
     print(f"Welcome to ampwrap_short")
 
+def check_special_primers(forward, reverse):
+     if forward.upper() == "CCTACGGGNGGCWGCAG" and reverse.upper() == "GACTACHVGGGTATCTAATCC":
+        print(Fore.RED + """
+⚠️  You might encounter an issue when setting the -l parameter due to variation
+   in the lengths of 16S rRNA amplicon segments. While this variation is not
+   large, it does exist. In particular, there are two predominant V3-V4 fragment
+   lengths in nature:
+
+      • ~460 nts
+      • ~440 nts
+
+Choosing the Correct -l Parameter
+--------------------------------
+To account for this variation, consider checking which option is better for your analysis:
+
+   -l 444 → 464 - 38 (primers)
+   -l 426 → 444 - 38 (primers)
+
+This may affect the FIGARO optimization of dada2 denoising parameters.
+""" + Style.RESET_ALL)
+        input("\nPress ENTER to continue... ")
 
 
 
@@ -154,7 +175,7 @@ def main():
     except SystemExit:
         #parser.print_usage()
         sys.exit(0)
-
+    check_special_primers(args.forward_primer, args.reverse_primer)
     input_dir = args.input_directory
     output_dir = args.output_directory
     is_quiet = args.quiet
