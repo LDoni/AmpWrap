@@ -95,7 +95,8 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon
 PS: Don't use it on multiple sequencing runs. If you want to analyze different runs, it's better to merge the DADA2 outputs after DADA2.
 
 ## Short reads Test Usage
-You can use a small toy sequencing run to test ampwrap
+You can use a small toy sequencing run to test ampwrap.
+The following script will download fastq files and run ampwrap short
 ```sh
 bash AmpWrap/test/test_short.sh
 ```
@@ -103,7 +104,7 @@ bash AmpWrap/test/test_short.sh
 ## Real 16S rRNA data V4V5 Test Usage
 You can use a small true sequencing run to test ampwrap
 ```sh
-test_real_short_data.sh
+bash AmpWrap/test/test_real_short_data.sh
 ```
 
 If the test goes smoothly you are ready to analyze your data
