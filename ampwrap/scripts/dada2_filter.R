@@ -2,7 +2,7 @@ args <- commandArgs(trailingOnly = TRUE)
 input_dir <- args[1]
 output_dir <- args[2]
 figaro_params <- args[3]
-
+options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 suppressPackageStartupMessages(library(jsonlite))
 
@@ -25,3 +25,4 @@ out <- filterAndTrim(fwd, filt_fwd, rev, filt_rev, truncLen = truncLen, maxEE = 
 sample_names <- sub("^([^_]+).*", "\\1", basename(fwd))
 out_df <- data.frame(sample = sample_names, out)
 write.table(out_df, file.path(output_dir, "filter_summary.tsv"), row.names = FALSE, sep = "\t", quote = FALSE)
+options(warn=0)
