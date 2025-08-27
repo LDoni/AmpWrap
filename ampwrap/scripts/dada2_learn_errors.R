@@ -3,7 +3,7 @@
 args <- commandArgs(trailingOnly = TRUE)
 input_dir <- args[1]
 output_dir <- args[2]
-
+options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 
 
@@ -34,3 +34,4 @@ suppressWarnings({
 
 })
 
+options(warn=-0)
