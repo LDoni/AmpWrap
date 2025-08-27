@@ -5,7 +5,7 @@ input_dir <- args[1]
 err_fwd_file <- args[2]
 err_rev_file <- args[3]
 output <- args[4]
-
+options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 
 # Elenco dei file filtrati
@@ -32,3 +32,4 @@ saveRDS(merged, output)
 
 saveRDS(dada_fwd, file.path(dirname(output), "dada_fwd.rds"))
 saveRDS(dada_rev, file.path(dirname(output), "dada_rev.rds"))
+options(warn=0)
