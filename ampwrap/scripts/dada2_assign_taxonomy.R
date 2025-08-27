@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 input <- args[1]
 silva_db <- args[2]
 output_dir <- args[3]
-
+options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 
 # Carica dati senza chimere
@@ -49,3 +49,4 @@ rownames(asv_tax) <- gsub(pattern = ">", replacement = "", x = asv_headers)
 
 # Salva la tabella della tassonomia
 write.table(asv_tax, file.path(output_dir, "ASVs_taxonomy.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)
+options(warn=0)
