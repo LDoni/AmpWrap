@@ -7,10 +7,40 @@ import sys
 import yaml
 import subprocess
 import re
+from colorama import Fore, Style
 
+# -------------------------------
+# DATABASE TABLE
+# -------------------------------
+DB_TABLE = [
+    ["Database Name", "Source", "Version / Date", "File Name", "MD5", "Download Link"],
+    ["SILVA SSU r138.2", "DECIPHER", "2024", "SILVA_SSU_r138_2_2024.RData", "4e272e39c2d71f5d3e7a31b00dbb1df4", "https://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2_2024.RData"],
+    ["GTDB r226", "DECIPHER", "April 2025", "GTDB_r226-mod_April2025.RData", "2aca8a1cfc4c8357a61eb51413f4e476", "https://www2.decipher.codes/data/Downloads/TrainingSets/GTDB_r226-mod_April2025.RData"],
+    ["RDP v18", "DECIPHER", "July 2020", "RDP_v18-mod_July2020.RData", "e0e8ed5bc34b28ab416df2d7fc1568ec", "https://www2.decipher.codes/data/Downloads/TrainingSets/RDP_v18-mod_July2020.RData"],
+    ["RDP v19", "DADA2", "2023-08-23", "rdp_19_toGenus_trainset.fa.gz", "390b8a359c45648adf538e72a1ee7e28", "https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz?download=1"],
+    ["SILVA v138.2", "DADA2", "2025", "silva_nr99_v138.2_toGenus_trainset.fa.gz", "1764e2a36b4500ccb1c7d5261948a414", "https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1"],
+    ["RefSeq+RDP v16", "DADA2", "2020-06-11", "RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz", "53aac0449c41db387d78a3c17b06ad07", "https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1"],
+    ["GTDB r202", "DADA2", "2020-04-28", "GTDB_bac120_arc122_ssu_r202_Genus.fa.gz", "40c1ee877ad2c5dca81e1cdf9a52ac3a", "https://zenodo.org/records/4735821/files/GTDB_bac120_arc122_ssu_r202_Genus.fa.gz?download=1"],
+    ["Greengenes2 2024.09", "DADA2", "2024-09", "gg2_2024_09_toGenus_trainset.fa.gz", "82a2571c9ff5009cbd2f3fded79069ed", "https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1"]
+]
 
+DB_CHOICES = [
+    "decipher_silva138",
+    "decipher_gtdb226",
+    "decipher_rdp18",
+    "dada2_silva_genus138",
+    "dada2_RDP_genus19",
+    "dada2_GG2_genus09",
+    "dada2_RefSeq_RDPv16",
+    "dada2_GTDB_r202"
+]
+
+# -------------------------------
+# UTILS
+# -------------------------------
 def print_banner():
     banner = """
+
 
 
    █████╗ ███╗   ███╗██████╗                        ██╗   
@@ -26,12 +56,20 @@ def print_banner():
    ╚██╗                 ╚███╔███╔╝██║  ██║██║  ██║██║     
     ╚═╝                  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     
                                                           
-
-
 """
     print(banner)
+    print("Welcome to ampwrap_short\n")
 
-    print(f"Welcome to ampwrap_short")
+def print_db_table():
+    col_widths = [max(len(str(row[i])) for row in DB_TABLE) for i in range(len(DB_TABLE[0]))]
+    sep = "| " + " | ".join("-"*w for w in col_widths) + " |"
+    # Header
+    header = "| " + " | ".join(str(DB_TABLE[0][i]).ljust(col_widths[i]) for i in range(len(DB_TABLE[0]))) + " |"
+    print(header)
+    print(sep)
+    for row in DB_TABLE[1:]:
+        print("| " + " | ".join(str(row[i]).ljust(col_widths[i]) for i in range(len(row))) + " |")
+    print("\n")
 
 def check_special_primers(forward, reverse):
      if forward.upper() == "CCTACGGGNGGCWGCAG" and reverse.upper() == "GACTACHVGGGTATCTAATCC":
@@ -54,8 +92,6 @@ To account for this variation, consider checking which option is better for your
 This may affect the FIGARO optimization of dada2 denoising parameters.
 """ + Style.RESET_ALL)
         input("\nPress ENTER to continue... ")
-
-
 
 def FVieiraStandard(file_):
     fileName = os.path.basename(file_)
@@ -97,32 +133,25 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
         "sample": [f[1].split(".")[0] for f in metainfo],
         "script": "script",
         "logs": "logs",
-	"file_extension": extension,
+        "file_extension": extension,
         "figaro_name": figaro_name
     }
 
     config_path = os.path.join(output_dir, "config.yaml")
     with open(config_path, "w") as f:
         yaml.dump(config, f)
-    
+
     return config_path
 
-
 def run_snakemake(config_path, is_quiet=False):
-    import os
-    import subprocess
-    import sys
-    
     conda_bin_dir = os.path.join(os.environ['CONDA_PREFIX'], 'bin')
     snakefile_path = os.path.join(conda_bin_dir, 'snakefile.short')
-    
+
     print(f"Cerco Snakefile in: {snakefile_path}")
     if not os.path.exists(snakefile_path):
         print(f"ERROR: snakefile.short not found in {conda_bin_dir}")
-        print("Check paths with:")
-        print(f"  ls {conda_bin_dir} | grep snakefile.short")
         sys.exit(1)
-    
+
     args = [
         "snakemake",
         "--configfile", config_path,
@@ -130,51 +159,47 @@ def run_snakemake(config_path, is_quiet=False):
         "--nolock",
         "--snakefile", snakefile_path
     ]
-    
+
     if is_quiet:
         args += ["--quiet", "all"]
-    
+
     print("Let's Go:", " ".join(args))
-    
+
     try:
         subprocess.run(args, check=True)
     except subprocess.CalledProcessError as e:
         print(f"ERROR in Snakemake: {e}")
         sys.exit(1)
 
-
-
-
+# -------------------------------
+# MAIN
+# -------------------------------
 def main():
     print_banner()
-    
-    parser = argparse.ArgumentParser(description="Process raw sequencing files for downstream analysis.")
-    parser.add_argument("-i", "--input_directory", required=True, help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
-    parser.add_argument("-a", "--forward_primer", required=True, help="Specify the forward primer sequence")
-    parser.add_argument("-A", "--reverse_primer", required=True, help="Specify the reverse primer sequence")
-    parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "ampwrap_short"), help="Specify the output directory (default: ./ampwrap_short)")
-    parser.add_argument("-l", "--amplen", type=int, help="Specify the length of the amplified sequence target (e.g., R926 - F515 = 411pb - pF19 - pR20 = 372)")
-    parser.add_argument(
-    "-d", "--db_choice",
-    choices=[
-        "decipher_silva138",
-        "dada2_silva_genus138",
-        "dada2_RDP_genus19",
-        "dada2_GG2_genus09"],
-    default="dada2_silva_genus138",
-    required=False,
-    help=(
-        "Specify the database choice for taxonomy assignment: "
-        "'decipher_silva138' (DECIPHER with SILVA 138), "
-        "'dada2_silva_genus138' (DADA2 with SILVA 138, genus level), "
-        "'dada2_RDP_genus19' (DADA2 with RDP, genus level), "
-        "'dada2_GG2_genus09' (DADA2 with GreenGenes 09, genus level). "
-        "Default: 'dada2_silva_genus138'."))   
-    parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
-    try: args = parser.parse_args()
-    except SystemExit:
-        #parser.print_usage()
+
+    parser = argparse.ArgumentParser(
+        description="ampwrap_short: process raw sequencing files and assign taxonomy."
+    )
+    parser.add_argument("-i", "--input_directory", help="Input directory with raw fq/fq.gz/fastq/fastq.gz files")
+    parser.add_argument("-a", "--forward_primer",  help="Forward primer sequence")
+    parser.add_argument("-A", "--reverse_primer",  help="Reverse primer sequence")
+    parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "ampwrap_short"), help="Output directory (default: ./ampwrap_short)")
+    parser.add_argument("-l", "--amplen", type=int, help="Length of the amplified sequence target")
+    parser.add_argument("-d", "--db_choice", default="dada2_silva_genus138", help="Database for taxonomy assignment. Choices:\n" + "\n".join(DB_CHOICES))
+    parser.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
+    parser.add_argument("--db-info", action="store_true", help="Show available databases and exit")
+
+    args = parser.parse_args()
+
+    # --db-info
+    if args.db_info:
+        print_db_table()
         sys.exit(0)
+    if not args.input_directory or not args.forward_primer or not args.reverse_primer:
+        parser.print_usage()
+        print("\nError: -i, -a and -A are required unless --db-info is used.")
+        sys.exit(1)
+
     check_special_primers(args.forward_primer, args.reverse_primer)
     input_dir = args.input_directory
     output_dir = args.output_directory
@@ -183,13 +208,8 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     file_patterns = ["*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
-    files = [
-        file
-        for pattern in file_patterns
-        for file in glob.glob(os.path.join(input_dir, pattern))
-	if re.search(r"_[Rr][12](?:_|\.)", file)
-    ]
-
+    files = [file for pattern in file_patterns for file in glob.glob(os.path.join(input_dir, pattern))
+             if re.search(r"_[Rr][12](?:_|\.)", file)]
     if not files:
         print("No matching files found in the input directory.")
         sys.exit(1)
@@ -211,7 +231,6 @@ def main():
         sys.exit(1)
 
     sample_tab_path = os.path.join(output_dir, "sample.tab")
-
     with open(sample_tab_path, "w") as sf:
         for t in metainfo:
             file_path, fileName, sample, direction = t
@@ -219,11 +238,10 @@ def main():
             figaro_name = fxn.__name__
             sf.write(f"{sample} {direction} {file_path} {fxn.__name__}\n")
 
-
     config_path = write_config_yaml(
         input_dir, output_dir, args.forward_primer, args.reverse_primer, args.amplen, args.db_choice, metainfo, extension, figaro_name
     )
-    run_snakemake(config_path)
+    run_snakemake(config_path, is_quiet)
 
 if __name__ == "__main__":
     main()
