@@ -3,12 +3,12 @@ import pandas as pd
 import json
 from datetime import datetime
 
-# Leggi i dati di input
+# Lread input
 df1 = pd.read_table(snakemake.input.cutadapt)
 df2 = pd.read_table(snakemake.input.dada2)
 df2["total_retained"] = df2["total_retained"].apply(lambda x: f"{x}%")
 
-# Unisci i dataframe
+# merge the  dataframe
 df = pd.merge(df1, df2, on="sample")
 new_columns = pd.MultiIndex.from_tuples([
     ("cutadapt", "reads retained"),
@@ -24,23 +24,32 @@ new_columns = pd.MultiIndex.from_tuples([
 df_multi = df.set_index("sample")
 df_multi.columns = new_columns
 
-# Leggi i parametri di Figaro
+# read   parametri   Figaro
 with open(snakemake.input.figaro_json, "r") as fh:
     data = json.load(fh)
 d = data[0]
 trim_position = f"forward:{d['trimPosition'][0]}, reverse:{d['trimPosition'][1]}"
 max_expected_error = f"forward:{d['maxExpectedError'][0]}, reverse:{d['maxExpectedError'][1]}"
 
-# Informazioni sul metodo di tassonomia
+# tax info
 tax_methods = {
-    "decipher_silva138": ("decipher", "Silva", "138"),
-    "dada2_silva_genus138": ("dada2", "Silva", "138"),
-    "dada2_RDP_genus19": ("dada2", "RDP", "19"),
-    "dada2_GG2_genus09": ("dada2", "GreenGenes", "09")
+    "decipher_silva138": ("DECIPHER", "Silva", "138"),
+    "decipher_gtdb226": ("DECIPHER", "GTDB", "226"),
+    "decipher_rdp18": ("DECIPHER", "RDP", "18"),
+    "dada2_silva_genus138": ("DADA2", "Silva", "138"),
+    "dada2_RDP_genus19": ("DADA2", "RDP", "19"),
+    "dada2_GG2_genus09": ("DADA2", "GreenGenes2", "2024.09"),
+    "dada2_RefSeq_RDPv16": ("DADA2", "RefSeq+RDP", "v16"),
+    "dada2_GTDB_r202": ("DADA2", "GTDB", "r202"),
 }
-method, database, version = tax_methods.get(snakemake.params.taxonomy_method)
 
-# Genera il report
+method, database, version = tax_methods.get(
+    snakemake.params.taxonomy_method,
+    ("Unknown", snakemake.params.taxonomy_method, "")
+)
+
+
+# build up report
 report = f"""
 # Report file 
 Analysis started: {snakemake.params.start}
