@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-
+options(warn=-1)
 # Carica i pacchetti necessari
 suppressPackageStartupMessages(library(dada2))
 suppressPackageStartupMessages(library(DECIPHER))
@@ -64,3 +64,4 @@ rownames(asv_tax) <- gsub(pattern = ">", replacement = "", x = asv_headers)
 
 # Salva la tabella della tassonomia
 write.table(asv_tax, file.path(output_dir, "ASVs_taxonomy.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)
+options(warn=0)
