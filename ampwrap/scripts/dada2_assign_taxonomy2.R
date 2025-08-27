@@ -46,10 +46,12 @@ ranks <- c("Domain", "Phylum", "Class", "Order", "Family", "Genus", "Species")
 # Sostituisci "unclassified_" con NA
 
 asv_tax <- t(sapply(tax_info, function(x) {
-  m <- match(ranks, x$rank)
-  taxa <- x$taxon[m]
+  taxa <- rep(NA, length(ranks))
+  full_tax <- unlist(strsplit(x$taxon, ";\\s*"))  # split su "; "
+  full_tax <- full_tax[full_tax != "Root"]
+  taxa[seq_along(full_tax)] <- full_tax[seq_along(full_tax)]
   taxa[startsWith(taxa, "unclassified_")] <- NA
-  taxa
+  return(taxa)
 }))
 
 
