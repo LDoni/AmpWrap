@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-
+options(warn=-1)
 # Carica i pacchetti necessari
 suppressPackageStartupMessages(library(dada2))
 
@@ -44,3 +44,4 @@ track <- cbind(sample = rownames(track), track)
 
 # Salva il tracking in un file TSV
 write.table(track, output_tsv, row.names = FALSE, sep = "\t", quote = FALSE)
+options(warn=0)
