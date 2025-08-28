@@ -264,6 +264,6 @@ In filterAndTrim(forward_reads, filtered_forward_reads, reverse_reads,  :
 No reads passed the filter. Please revisit your filtering parameters.
 ```
 To avoid this issue, ensure that the chosen -l value aligns with the expected fragment lengths in your dataset.
-
+For amplicons with some expected biological variation in length, use the longest expected size
  
 
