@@ -9,7 +9,7 @@
   - [Install Miniconda](#install-miniconda)
   - [Install Mamba](#install-mamba)
   - [Install AmpWrap](#install-ampwrap)
-- [Usage](#usage)
+- [Usage](#general-usage)
   - [AmpWrap for Short Reads (Illumina)](#ampwrap-for-short-reads-illumina)
   - [AmpWrap for Long Reads (Nanopore)](#ampwrap-for-long-reads-nanopore)  
 - [Troubleshooting](#troubleshooting)
