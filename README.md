@@ -94,21 +94,21 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon
 PS: Don't use it on multiple sequencing runs. If you want to analyze different runs, it's better to merge the DADA2 outputs after DADA2.
 
 ## Short reads Test Usage
-You can use a small toy sequencing run to test ampwrap.
-The following script will download fastq files and run ampwrap short
+You can use a small toy sequencing run to test AmpWrap.
+The following script will download fastq files and run AmpWrap short
 ```sh
 bash ~/AmpWrap/test/test_short.sh
 ```
 
 ## Real 16S rRNA data V4V5 Test Usage
-You can use a small true sequencing run to test ampwrap
+You can use a small true sequencing run to test AmpWrap
 ```sh
 bash ~/AmpWrap/test/test_real_short_data.sh
 ```
 
 If the test goes smoothly you are ready to analyze your data
 
-## Available databases for ampwrap short
+## Available databases for AmpWrap short
 
 
 | Database Name           | Source    | Version / Date | File Name                                | MD5                               | Download Link |
@@ -145,7 +145,7 @@ Basic usage:
 ampwrap long -i input_directory -o output_directory
 ```
 ## Long reads Test Usage
-You can use a small toy sequencing run to test ampwrap
+You can use a small toy sequencing run to test AmpWrap
 ```sh
 bash ~/AmpWrap/test/test_long.sh
 ```
@@ -200,7 +200,7 @@ To account for this variation, consider checking which option is better for your
 
 #### Potential Issue with Incorrect `-l` Settings  
 
-If `-l` is not set properly (taking primer lengths into account), **Figaro** may select an incorrect pair of truncation parameters in **DADA2**, resulting in the following error:  
+If `-l` is not set properly (taking primer lengths into account), **FIGARO** may select an incorrect pair of truncation parameters in **DADA2**, resulting in the following error:  
 
 ```bash
 Warning message:
