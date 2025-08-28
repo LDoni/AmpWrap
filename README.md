@@ -83,7 +83,7 @@ To process short-read 16S rRNA data from Illumina sequencing:
 2. Primer removal from sequencing reads with [Cutadapt](https://github.com/marcelm/cutadapt).
        The *--discard-untrimmed* option is applied
 3. Post-cutadapt quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-4. Determine optimal trimming parameters for DADA2 with [Figaro](https://github.com/Zymo-Research/figaro)
+4. Determine optimal trimming parameters for DADA2 with [FIGARO](https://github.com/Zymo-Research/figaro)
 5. Amplicon sequence variant inference with [DADA2](https://github.com/benjjneb/dada2)
 
 
