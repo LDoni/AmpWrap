@@ -97,13 +97,13 @@ PS: Don't use it on multiple sequencing runs. If you want to analyze different r
 You can use a small toy sequencing run to test ampwrap.
 The following script will download fastq files and run ampwrap short
 ```sh
-bash AmpWrap/test/test_short.sh
+bash ~/AmpWrap/test/test_short.sh
 ```
 
 ## Real 16S rRNA data V4V5 Test Usage
 You can use a small true sequencing run to test ampwrap
 ```sh
-bash AmpWrap/test/test_real_short_data.sh
+bash ~/AmpWrap/test/test_real_short_data.sh
 ```
 
 If the test goes smoothly you are ready to analyze your data
@@ -147,7 +147,7 @@ ampwrap long -i input_directory -o output_directory
 ## Long reads Test Usage
 You can use a small toy sequencing run to test ampwrap
 ```sh
-bash AmpWrap/test/test_long.sh
+bash ~/AmpWrap/test/test_long.sh
 ```
 Then you can use the [EMU](https://github.com/treangenlab/emu), scripts to combine the frequency tables:
 ```sh
