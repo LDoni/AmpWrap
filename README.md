@@ -137,7 +137,7 @@ S1_r2.fq.gz
 
 
 ### AmpWrap for Short Reads (Illumina)
-To process short-read 16S rRNA data from Illumina sequencing:
+To process short-read 16S rRNA gene data from Illumina sequencing:
 ##  Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
 2. Primer removal from sequencing reads with [Cutadapt](https://github.com/marcelm/cutadapt).
@@ -160,7 +160,7 @@ The following script will download fastq files and run AmpWrap short
 bash ~/AmpWrap/test/test_short.sh
 ```
 
-## Real 16S rRNA data V4V5 Test Usage
+## Real 16S rRNA gene data V4V5 Test Usage
 You can use a small true sequencing run to test AmpWrap
 ```sh
 bash ~/AmpWrap/test/test_real_short_data.sh
@@ -187,7 +187,7 @@ If the test goes smoothly you are ready to analyze your data
 
 
 ### AmpWrap for Long Reads (Nanopore)
-For long-read 16S rRNA data from Nanopore sequencing, use:
+For long-read 16S rRNA gene data from Nanopore sequencing, use:
 ## Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
 2. Adapters removal with [Porechop](https://github.com/rrwick/Porechop) or [Porechop_ABI](https://github.com/bonsai-team/Porechop_ABI). The use of **Porechop** is optional and depends on the `--trimming` parameter.
