@@ -184,7 +184,7 @@ def main():
     parser.add_argument("-a", "--forward_primer",  help="Forward primer sequence")
     parser.add_argument("-A", "--reverse_primer",  help="Reverse primer sequence")
     parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "ampwrap_short"), help="Output directory (default: ./ampwrap_short)")
-    parser.add_argument("-l", "--amplen", type=int, help="Length of the amplified sequence target (not including primers)")
+    parser.add_argument("-l", "--amplen", type=int, help="Length of the amplified sequence target (not including primers-->e.g., R926 - F515 = 411 - pF19 - pR20 = 372)")
     parser.add_argument("-d", "--db_choice", default="dada2_silva_genus138", help="Database for taxonomy assignment. Choices:\n" + "\n".join(DB_CHOICES))
     parser.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
     parser.add_argument("--db-info", action="store_true", help="Show available databases and exit")
