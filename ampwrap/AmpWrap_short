@@ -227,7 +227,7 @@ def main():
             break
 
     if not metainfo:
-    print(
+        print(
         "ERROR: Files do not follow any recognized naming convention!\n\n"
         "Please rename your FASTQ files.\n\n"
         "Supported input formats:\n"
