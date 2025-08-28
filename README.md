@@ -76,6 +76,43 @@ bash setup.sh
 ```sh
 ampwrap --help
 ```
+
+## Supported input formats
+
+The pipeline accepts two main naming conventions for paired-end FASTQ files.
+
+### 1. Illumina Standard Format
+The standard Illumina output naming convention:
+```
+<group>_<sample>_S##_L###_R[12]_001.(fastq|fq)[.gz]
+```
+
+**Example:**
+```
+ProjectA_Sample1_S1_L001_R1_001.fastq.gz
+ProjectA_Sample1_S1_L001_R2_001.fastq.gz
+```
+
+### 2. Custom Simple Format
+A simpler, more generic naming convention:
+```
+<sample>_[Rr][12].(fastq|fq)[.gz]
+```
+
+**Examples:**
+```
+SampleA_R1.fastq.gz
+SampleA_R2.fastq.gz
+
+S1_r1.fq.gz
+S1_r2.fq.gz
+```
+
+
+
+
+
+
 ### AmpWrap for Short Reads (Illumina)
 To process short-read 16S rRNA data from Illumina sequencing:
 ##  Workflow
