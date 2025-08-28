@@ -9,7 +9,7 @@ file_extension = config["file_extension"]
 trimming_method = config.get("trimming_method")
 tax_db = config["tax_db"]
 db_dir = config.get("db_dir",f"db_s/emu/{tax_db}")
-rank = config["rank"]
+rank = config.get("rank", None)
 cpus = int(config["threads"])
 #to_cutadapt = all(p in config and config[p] not in [None, ""] for p in ["forward_primer", "reverse_primer"])
 
@@ -23,8 +23,8 @@ forward_primer = config.get("forward_primer")
 reverse_primer = config.get("reverse_primer")
 
 def getCutAdaptInput(wildcards):
-	if trimming_method == None: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
-	return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq.gz"})
+        if trimming_method == None: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
+        return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq.gz"})
 
 def getNanoFiltInput(wildcards):
         if to_cutadapt == True: return({"fq":f"{output_dir}/intermediate/cutadapt/{wildcards.sample}_cutadapt.fq.gz"})
@@ -63,7 +63,7 @@ rule all:
         # QC initial
         expand(f"{config['output_dir']}/QC/raw_qc_initial/{{sample}}_fastqc.html", sample = sample_names),
         f"{config['output_dir']}/QC/raw_qc_initial/readcount/raw_reads_counts.txt",
-        f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",       
+        f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
         #Porechop
         expand(f"{config['output_dir']}/intermediate/porechop/{{sample}}-porechop.fastq.gz", sample=sample_names) if trimming_method != None else [],
         #Cutadapt
@@ -127,7 +127,7 @@ rule porechop:
             cmd = f"porechop -i {input} -o {output.fq}"
         else:
             raise ValueError(f"Unsupported trimming_method: {trimming_method}")
-        
+
         shell(f"""
             mkdir -p {output_dir}/intermediate/porechop
             {cmd} > /dev/null 2>&1
@@ -148,7 +148,7 @@ rule cutadapt_primers:
     shell:
       """
       mkdir -p {output_dir}/intermediate/cutadapt
-      cutadapt -e 0.2 -O 15 --revcomp -o {output.r1_trimmed} -a {params.forward_primer}...{params.RC_RVS} {input.fq} > {log} 
+      cutadapt -e 0.2 -O 15 --revcomp -o {output.r1_trimmed} -a {params.forward_primer}...{params.RC_RVS} {input.fq} > {log}
       """
 
 
@@ -197,7 +197,7 @@ rule multiqc_post:
     output: "{output_dir}/QC/raw_qc_post/multiqc_report.html"
     shell:
         """
-        multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1        
+        multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1
         """
 
 rule seqkit_stats_post_qc:
@@ -213,20 +213,42 @@ rule seqkit_stats_post_qc:
         seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-nanofilt.fastq > {output}
         """
 
+
+
 rule emu_database:
     output:
-        the_dir=directory(f"{db_dir}"),  
+        the_dir=directory(f"{db_dir}"),
         taxonomy=f"{db_dir}/taxonomy.tsv",
         taxids=f"{db_dir}/species_taxid.fasta"
-    shell:
-        f"""
-        mkdir -p {{output.the_dir}}  
-        osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_dir}/{tax_db}.tar  
-        tar -xvf {db_dir}/{tax_db}.tar -C {{output.the_dir}} > /dev/null 2>&1  
-        """
+    params:
+        md5_dict={
+            "emu": "707f235f515c0dc2e8d74278294241e7",
+            "rdp": "5aebf4f791d32950bfa07e5e0e7ea22a",
+            "silva": "4195810ceec63ed13b9ee3f9c678c52b"
+        }
+    run:
+        import os
+        db_tar = f"{db_dir}/{tax_db}.tar"
+        os.makedirs(output.the_dir, exist_ok=True)
+
+        # Scarica il file
+        shell(f"osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_tar}")
+
+        # MD5 check
+        expected_md5 = params.md5_dict[tax_db]
+        import subprocess
+        result = subprocess.run(f"echo '{expected_md5}  {db_tar}' | md5sum -c -", shell=True)
+        if result.returncode != 0:
+            raise ValueError(f"ERROR: MD5 checksum failed for {db_tar}")
+
+        # Estrai il tar
+        shell(f"tar -xvf {db_tar} -C {output.the_dir} > /dev/null 2>&1")
+
+
+
 
 rule emu_abundance:
-    input: 
+    input:
         fastq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
         db=lambda wildcards: f"db_s/emu/{config['tax_db']}" # "db_s/emu/{tax_db}"
     output:
@@ -250,20 +272,20 @@ rule reporter:
         emu_results = expand(
             "{output_dir}/results/emu/{sample}-nanofilt_rel-abundance.tsv",
             output_dir=config['output_dir'],
-            sample=config['sample_names']  
+            sample=config['sample_names']
         ),
         **({ "cutadapt": f"{config['output_dir']}/intermediate/cutadapt/combined_cutadapt.log" } if to_cutadapt else {})
     output:
         report = f"{config['output_dir']}/results/final_report.txt"
     params:
-        config.get("trimming_method"), 
+        config.get("trimming_method"),
         nl_min_qual = config["nl_min_qual"],
         nl_min_len = config["nl_min_len"],
         nl_max_len = config["nl_max_len"],
         emu_min_ab = config["emu_min_ab"],
         forward_p = config.get("forward_primer"),
         reverse_p = config.get("reverse_primer"),
-        RC_FWD = config.get("RC_FWD"), 
+        RC_FWD = config.get("RC_FWD"),
         RC_RVS = config.get("RC_RVS"),
         start = start_time,
         tax_db = config["tax_db"],
