@@ -5,7 +5,7 @@
 
 ## Table of Contents
 - [Introduction](#introduction)
-- [Installation with Conda](#installation-with-conda)
+- [Installation](#installation)
   - [Install Miniconda](#install-miniconda)
   - [Install Mamba](#install-mamba)
   - [Install AmpWrap](#install-ampwrap)
@@ -149,20 +149,16 @@ If the test goes smoothly you are ready to analyze your data
 
 ## Available databases for AmpWrap short
 
-
-| Database Name           | Source    | Version / Date | File Name                                | MD5                               | Download Link |
-|-------------------------|-----------|----------------|------------------------------------------|------------------------------------|---------------|
-| SILVA SSU r138.2        | DECIPHER  | 2024           | SILVA_SSU_r138_2_2024.RData              | `4e272e39c2d71f5d3e7a31b00dbb1df4` | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2_2024.RData) |
-| GTDB r226               | DECIPHER  | April 2025     | GTDB_r226-mod_April2025.RData            | `2aca8a1cfc4c8357a61eb51413f4e476` | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/GTDB_r226-mod_April2025.RData) |
-| RDP v18                 | DECIPHER  | July 2020      | RDP_v18-mod_July2020.RData               | `e0e8ed5bc34b28ab416df2d7fc1568ec` | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/RDP_v18-mod_July2020.RData) |
-| RDP v19                 | DADA2     | 2023-08-23     | rdp_19_toGenus_trainset.fa.gz            | `390b8a359c45648adf538e72a1ee7e28` | [Download](https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz?download=1) |
-| SILVA v138.2            | DADA2     | 2025           | silva_nr99_v138.2_toGenus_trainset.fa.gz | `1764e2a36b4500ccb1c7d5261948a414` | [Download](https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1) |
-| RefSeq+RDP v16          | DADA2     | 2020-06-11     | RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz    | `53aac0449c41db387d78a3c17b06ad07` | [Download](https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1) |
-| GTDB r202               | DADA2     | 2020-04-28     | GTDB_bac120_arc122_ssu_r202_Genus.fa.gz  | `40c1ee877ad2c5dca81e1cdf9a52ac3a` | [Download](https://zenodo.org/records/4735821/files/GTDB_bac120_arc122_ssu_r202_Genus.fa.gz?download=1) |
-| Greengenes2 2024.09     | DADA2     | 2024-09        | gg2_2024_09_toGenus_trainset.fa.gz       | `82a2571c9ff5009cbd2f3fded79069ed` | [Download](https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1) |
-
-
-
+| Database Name           | Source    | Version / Date | File Name                                | MD5                               | Download Link | Citation |
+|-------------------------|-----------|----------------|------------------------------------------|------------------------------------|---------------|---------------|
+| SILVA SSU r138.2        | DECIPHER  | 2024           | SILVA_SSU_r138_2_2024.RData              | `4e272e39c2d71f5d3e7a31b00dbb1df4` | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2_2024.RData) | Quast C. et al.,  2013 |
+| GTDB r226               | DECIPHER  | April 2025     | GTDB_r226-mod_April2025.RData            | `2aca8a1cfc4c8357a61eb51413f4e476` | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/GTDB_r226-mod_April2025.RData) | Parks D. et al., 2022|
+| RDP v18                 | DECIPHER  | July 2020      | RDP_v18-mod_July2020.RData               | `e0e8ed5bc34b28ab416df2d7fc1568ec` | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/RDP_v18-mod_July2020.RData) | Cole JR, et al., 2014 |
+| RDP v19                 | DADA2     | 2023-08-23     | rdp_19_toGenus_trainset.fa.gz            | `390b8a359c45648adf538e72a1ee7e28` | [Download](https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz?download=1) | Callahan, B. 2024  |
+| SILVA v138.2            | DADA2     | 2025           | silva_nr99_v138.2_toGenus_trainset.fa.gz | `1764e2a36b4500ccb1c7d5261948a414` | [Download](https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1) | Quast C. et al.,  2013 |
+| RefSeq+RDP v16          | DADA2     | 2020-06-11     | RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz    | `53aac0449c41db387d78a3c17b06ad07` | [Download](https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1) | Ali A. 2021 |
+| GTDB r202               | DADA2     | 2020-04-28     | GTDB_bac120_arc122_ssu_r202_Genus.fa.gz  | `40c1ee877ad2c5dca81e1cdf9a52ac3a` | [Download](https://zenodo.org/records/4735821/files/GTDB_bac120_arc122_ssu_r202_Genus.fa.gz?download=1) | Ali A. 2021 |
+| Greengenes2 2024.09     | DADA2     | 2024-09        | gg2_2024_09_toGenus_trainset.fa.gz       | `82a2571c9ff5009cbd2f3fded79069ed` | [Download](https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1) | Callahan, B. 2024 |
 
 
 
