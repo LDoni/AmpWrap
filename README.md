@@ -16,6 +16,7 @@
 
 ## Introduction
 AmpWrap is a streamlined and efficient workflow for the analysis of 16S rRNA gene amplicons, supporting both short-read (Illumina) and long-read (Nanopore) sequencing technologies.
+It was tested on Linux Mint 20, Ubuntu 24.04.1 LTS, WSL2 with Ubuntu 24.04.2 LTS
 
 ## Installation 
 AmpWrap can be easily installed using GitHub + Conda or Mamba.
