@@ -227,7 +227,17 @@ def main():
             break
 
     if not metainfo:
-        print("Files do not respect any naming convention! Change the file names and retry.")
+    print(
+        "ERROR: Files do not follow any recognized naming convention!\n\n"
+        "Please rename your FASTQ files.\n\n"
+        "Supported input formats:\n"
+        "  1) Illumina standard:\n"
+        "       <group>_<sample>_S##_L###_R[12]_001.(fastq|fq)[.gz]\n"
+        "       Example: Project_SampleA_S1_L001_R1_001.fastq.gz\n\n"
+        "  2) FVieira standard:\n"
+        "       <sample>_[Rr][12].(fastq|fq)[.gz]\n"
+        "       Example: SampleA_R1.fastq.gz; S1_r1.fq"
+    )
         sys.exit(1)
 
     sample_tab_path = os.path.join(output_dir, "sample.tab")
