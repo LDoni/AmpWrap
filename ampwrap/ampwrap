@@ -32,9 +32,7 @@ To see workflow-specific help:
     
     try:
         exe_path = Path(__file__).parent / executables[workflow]
-        cmd = [str(exe_path)] + sys.argv[2:]
-        
-        
+        cmd = ["python", str(exe_path)] + sys.argv[2:]
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError:
         sys.exit(1)
