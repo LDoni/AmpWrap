@@ -32,7 +32,10 @@
   - [Install AmpWrap](#install-ampwrap)
 - [Usage](#general-usage)
   - [AmpWrap for Short Reads (Illumina)](#ampwrap-for-short-reads-illumina)
-  - [AmpWrap for Long Reads (Nanopore)](#ampwrap-for-long-reads-nanopore)  
+  - [AmpWrap for Long Reads (Nanopore)](#ampwrap-for-long-reads-nanopore)
+  - [Running on HPC systems (SLURM/SGE)](#running-on-hpc-systems-slurmsge)
+  - [Resumability and checkpointing](#resumability-and-checkpointing)
+
 - [Troubleshooting](#troubleshooting)
 
 ## Introduction
@@ -215,7 +218,32 @@ emu combine-outputs <directory_path> <rank>
 Further implementations can be requested by opening a issue
 
 
+### Running on HPC systems (SLURM/SGE)
 
+AmpWrap is Snakemake-based and can run seamlessly on HPC/queue systems.  
+We provide example cluster profiles for **SLURM** and **SGE** in the [`profiles/`](profiles) directory.
+
+To launch AmpWrap on **SLURM**:
+```sh
+snakemake --profile profiles/slurm
+```
+
+on **SGE**:
+```sh
+snakemake --profile profiles/sge
+```
+
+### Resumability and checkpointing
+
+Snakemake natively supports resumability:
+
+- If a run is interrupted, simply re-run the same command and only incomplete or outdated steps will be executed.  
+- The provided HPC profiles enable:
+  - `--rerun-incomplete`: automatically re-run unfinished jobs  
+  - `--restart-times N`: retry failed jobs up to *N* times  
+  - `--keep-going`: continue executing independent jobs even if one fails  
+
+These options ensure robust and reproducible execution, especially for large cohorts or long HPC runs.
 
 
 ## Troubleshooting
