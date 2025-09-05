@@ -1,0 +1,14 @@
+# Example Snakemake profile for SLURM
+# Usage: snakemake --profile profiles/slurm
+
+cluster: "sbatch --cpus-per-task={threads} --mem={resources.mem_mb}M --time={resources.time}"
+jobs: 100   # max parallel jobs
+latency-wait: 60
+restart-times: 2
+rerun-incomplete: true
+keep-going: true
+
+# default resources (can be overridden in Snakefile rules)
+default-resources:
+  - mem_mb=4000
+  - time=60

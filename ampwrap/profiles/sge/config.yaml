@@ -1,0 +1,13 @@
+# Example Snakemake profile for SGE
+# Usage: snakemake --profile profiles/sge
+
+cluster: "qsub -pe smp {threads} -l h_vmem={resources.mem_mb}M -l h_rt={resources.time}"
+jobs: 100
+latency-wait: 60
+restart-times: 2
+rerun-incomplete: true
+keep-going: true
+
+default-resources:
+  - mem_mb=4000
+  - time=60
