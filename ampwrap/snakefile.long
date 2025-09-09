@@ -12,6 +12,8 @@ db_dir = config.get("db_dir",f"db_s/emu/{tax_db}")
 rank = config.get("rank", None)
 cpus = int(config["threads"])
 #to_cutadapt = all(p in config and config[p] not in [None, ""] for p in ["forward_primer", "reverse_primer"])
+chimera = config.get("chimera", None)
+suffix = "scrubbed" if chimera else "nanofilt"
 
 to_cutadapt = all(
     p in config and config[p] not in [None, "", "null", "None"]
@@ -31,6 +33,10 @@ def getNanoFiltInput(wildcards):
         else:
             if trimming_method != None: return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq.gz"})
             else: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
+
+def getEmuInput(wildcards):
+        if chimera == True: return({"fastq":f"{output_dir}/intermediate/nanofilt/{wildcards.sample}-scrubbed.fastq"})
+        else: return({"fastq":f"{output_dir}/intermediate/nanofilt/{wildcards.sample}-nanofilt.fastq"})
 
 # nanofilt parameters
 nl_min_len = config.get("nl_min_len",1200)
@@ -73,11 +79,13 @@ rule all:
         expand(f"{config['output_dir']}/QC/raw_qc_post/{{sample}}-nanofilt_fastqc.html", sample=sample_names),
         f"{config['output_dir']}/QC/raw_qc_post/multiqc_report.html",
         f"{config['output_dir']}/QC/raw_qc_post/readcount/filtered_reads_counts.txt",
+        expand(f"{config['output_dir']}/intermediate/nanofilt/{{sample}}-scrubbed.fastq", sample=sample_names) if chimera else [],
         #emuDB
         f"{db_dir}",
         expand("{db_dir}/{tax_file}",db_dir=db_dir,tax_file=["taxonomy.tsv","species_taxid.fasta"]),
         #emu
-        expand(f"{output_dir}/results/emu/{{sample}}-nanofilt_rel-abundance.tsv", sample=sample_names),
+        #expand(f"{output_dir}/results/emu/{{sample}}-nanofilt_rel-abundance.tsv", sample=sample_names),
+        expand(f"{output_dir}/results/emu/{{sample}}-{suffix}_rel-abundance.tsv", sample=sample_names, suffix=suffix),
         #final report
         f"{config['output_dir']}/results/final_report.txt"
 
@@ -200,19 +208,49 @@ rule multiqc_post:
         multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1
         """
 
+#rule seqkit_stats_post_qc:
+#    input:
+#        expand("{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
+#               output_dir=output_dir,
+#               sample=sample_names)
+#    output:
+#        "{output_dir}/QC/raw_qc_post/readcount/filtered_reads_counts.txt"
+#    shell:
+#        """
+#        mkdir -p $(dirname {output})
+#        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-nanofilt.fastq > {output}
+#        """
+
+rule chimera_scrub:
+    input:
+        fq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
+    output:
+        fq="{output_dir}/intermediate/nanofilt/{sample}-scrubbed.fastq",
+    threads:
+        cpus
+    params:
+        paf="{output_dir}/intermediate/nanofilt/{sample}.paf",
+        yacrd="{output_dir}/intermediate/nanofilt/{sample}.yacrd"
+    shell:
+        """
+        minimap2 -x ava-ont -g 500 -t {threads} {input.fq} {input.fq} > {params.paf}
+        yacrd -i {params.paf} -o {params.yacrd} -c 4 -n 0.4 scrubb -i {input.fq} -o {output.fq}
+        rm {params.paf}
+        """
+
 rule seqkit_stats_post_qc:
     input:
-        expand("{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
+        expand("{output_dir}/intermediate/nanofilt/{sample}-{suffix}.fastq",
                output_dir=output_dir,
-               sample=sample_names)
+               sample=sample_names,
+               suffix=suffix)
     output:
         "{output_dir}/QC/raw_qc_post/readcount/filtered_reads_counts.txt"
     shell:
         """
         mkdir -p $(dirname {output})
-        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-nanofilt.fastq > {output}
+        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-{suffix}.fastq > {output}
         """
-
 
 
 rule emu_database:
@@ -249,19 +287,21 @@ rule emu_database:
 
 rule emu_abundance:
     input:
-        fastq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
-        db=lambda wildcards: f"db_s/emu/{config['tax_db']}" # "db_s/emu/{tax_db}"
+        #fastq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
+        #db=lambda wildcards: f"db_s/emu/{config['tax_db']}" # "db_s/emu/{tax_db}"
+        unpack(getEmuInput)
     output:
         "{output_dir}/results/emu/{sample}-nanofilt_rel-abundance.tsv",
     params:
         type='map-ont',
-        min_ab=emu_min_ab
+        min_ab=emu_min_ab,
+        db=lambda wildcards: f"db_s/emu/{config['tax_db']}" # "db_s/emu/{tax_db}"
     threads:
         cpus
     shell:
         """
         mkdir -p {output_dir}/results/emu
-        emu abundance {input.fastq} --output-dir {output_dir}/results/emu --db {input.db} --threads {threads} --min-abundance {params.min_ab}
+        emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab}
         """
 
 
@@ -270,9 +310,10 @@ rule reporter:
         seqkit_pre = f"{config['output_dir']}/QC/raw_qc_initial/readcount/raw_reads_counts.txt",
         seqkit_post = f"{config['output_dir']}/QC/raw_qc_post/readcount/filtered_reads_counts.txt",
         emu_results = expand(
-            "{output_dir}/results/emu/{sample}-nanofilt_rel-abundance.tsv",
+            "{output_dir}/results/emu/{sample}-{suffix}_rel-abundance.tsv",
             output_dir=config['output_dir'],
-            sample=config['sample_names']
+            sample=config['sample_names'],
+            suffix=suffix
         ),
         **({ "cutadapt": f"{config['output_dir']}/intermediate/cutadapt/combined_cutadapt.log" } if to_cutadapt else {})
     output:
