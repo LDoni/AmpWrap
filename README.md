@@ -281,7 +281,7 @@ To account for this variation, consider checking which option is better for your
 
 - `-l 444` → `464 - 38` (primers)  
 - `-l 426` → `444 - 38` (primers)  
-
+Therefore, for the calculation of the FIGARO parameters, for amplicons with some expected biological variation in length, it is best to use the longest expected size. 
 #### Potential Issue with Incorrect `-l` Settings  
 
 If `-l` is not set properly (taking primer lengths into account), **FIGARO** may select an incorrect pair of truncation parameters in **DADA2**, resulting in the following error:  
