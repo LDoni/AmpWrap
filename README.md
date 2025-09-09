@@ -197,7 +197,8 @@ For long-read 16S rRNA gene data from Nanopore sequencing, use:
 3. Primers removal with [Cutadapt](https://github.com/marcelm/cutadapt). The use of **Cutadapt** is optional and depends on the `--cutadapt-forward` and  `--cutadapt-reverse` parameters.
 4. Filtering reads by length and quality with [NanoFilt](https://github.com/wdecoster/nanofilt)
 5. Post-filtering quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
-6. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
+6. Detect chimeras and filter them out (optional) with [yacrd](https://github.com/natir/yacrd)
+7. Taxonomic classification and abundance estimation with [EMU](https://github.com/treangenlab/emu)
 
 Basic usage:
 ```sh
