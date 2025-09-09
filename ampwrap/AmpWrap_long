@@ -43,7 +43,7 @@ def print_banner():
 
 
 
-def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, forward_primer, reverse_primer):
+def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, forward_primer, reverse_primer, chimera):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -62,6 +62,7 @@ def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names,
     }
 
     if trimming != None: config["trimming_method"] = trimming
+    if chimera : config["chimera"] = True
 
     config_path = os.path.join(output_dir, "config.yaml")
     with open(config_path, "w") as f:
@@ -139,6 +140,7 @@ def main():
     parser.add_argument("--cutadapt-forward",help="Forward primer sequence to trim it with cutadapt")
     parser.add_argument("--cutadapt-reverse",help="Reverse primer sequence to trim it with cutadapt")
     parser.add_argument("--db-info",action="store_true", help="Print available databases with version and checksum info")
+    parser.add_argument("-c", "--chimera", action="store_true", help="Specify chimera flag if you want to remove chimeras")
     try: args = parser.parse_args()
     except SystemExit:
         #parser.print_usage()
@@ -197,7 +199,7 @@ def main():
 
 
     config_path = write_config_yaml(
-        input_dir, output_dir,  args.db_choice, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, reverse_primer, forward_primer
+        input_dir, output_dir,  args.db_choice, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, reverse_primer, forward_primer, args.chimera
     )
     run_snakemake(config_path)
 
