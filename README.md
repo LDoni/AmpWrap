@@ -213,6 +213,11 @@ Then you can use the [EMU](https://github.com/treangenlab/emu), scripts to combi
 emu combine-outputs <directory_path> <rank>
 ```
 
+For negative control samples we suggest to use the --keep-counts flag to to retain per-taxon counts, and then use tools such as [decontam](https://github.com/benjjneb/decontam), not included in ampwrap.
+
+
+
+
 
 
 Further implementations can be requested by opening a issue
