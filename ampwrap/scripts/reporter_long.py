@@ -14,7 +14,11 @@ df_post = pd.read_table(seqkit_post)
 
 # Extract sample names
 df_pre["sample"] = df_pre["file"].apply(lambda x: x.split("/")[-1].replace(".fastq", ""))
-df_post["sample"] = df_post["file"].apply(lambda x: x.split("/")[-1].replace("-nanofilt.fastq", ""))
+#df_post["sample"] = df_post["file"].apply(lambda x: x.split("/")[-1].replace("-nanofilt.fastq", ""))
+df_post["sample"] = df_post["file"].apply(
+    lambda x: x.split("/")[-1]
+                    .replace("-nanofilt.fastq", "")
+                    .replace("-scrubbed.fastq", ""))
 
 # Select relevant columns
 df_pre = df_pre[["sample", "num_seqs", "sum_len", "min_len", "avg_len", "max_len"]]
