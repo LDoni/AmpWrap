@@ -191,6 +191,8 @@ It also assumes that you have trimmed the runs in the same fashion, which is wha
 
 https://github.com/benjjneb/dada2/issues/95
 
+-->> se user mette più cartelle --> allora c'è disclaimer e cutadapt trimma a lunghezza fissa in base a primer inserito sulle run differenti
+perché il totale dell'amplicone fino a che c'è overlap ha la stessa lunghessa 
 
 
 
