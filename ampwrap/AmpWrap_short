@@ -120,7 +120,7 @@ def IlluminaStandard(file_):
         )
     return file_, fileName, sample, direction
 
-def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice, metainfo, extension, figaro_name):
+def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice, metainfo, extension, figaro_name, dada2_params=None):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -134,7 +134,10 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
         "script": "script",
         "logs": "logs",
         "file_extension": extension,
-        "figaro_name": figaro_name
+        "figaro_name": figaro_name,
+        "dada2_params": dada2_params if dada2_params else "",
+        "dada2_source": "user" if dada2_params else "figaro",
+        "disable_discard_untrimmed": disable_discard_untrimmed
     }
 
     config_path = os.path.join(output_dir, "config.yaml")
@@ -188,6 +191,8 @@ def main():
     parser.add_argument("-d", "--db_choice", default="dada2_silva_genus138", help="Database for taxonomy assignment. Choices:\n" + "\n".join(DB_CHOICES))
     parser.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
     parser.add_argument("--db-info", action="store_true", help="Show available databases and exit")
+    parser.add_argument("--cutadapt_disable_discard_untrimmed",help="Deactivate cutadapt option --discard-untrimmed",action="store_true",default=False)
+    parser.add_argument("--dada2_params",type=str,help="Semicolon-separated list of DADA2 parameters to override Figaro (e.g., 'truncLen=c(240,200);maxEE=c(2,2);truncQ=2')")
 
     args = parser.parse_args()
 
@@ -204,6 +209,14 @@ def main():
     input_dir = args.input_directory
     output_dir = args.output_directory
     is_quiet = args.quiet
+    disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
+
+    if args.dada2_params:
+        dada2_params = args.dada2_params.strip()
+        use_custom_dada2 = True
+    else:
+        dada2_params = None
+        use_custom_dada2 = False
 
     os.makedirs(output_dir, exist_ok=True)
 

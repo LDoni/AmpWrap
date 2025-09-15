@@ -58,7 +58,8 @@ def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names,
         "nl_min_qual": nl_min_qual,
         "emu_min_ab": emu_min_ab,
         "forward_primer": forward_primer,
-        "reverse_primer": reverse_primer
+        "reverse_primer": reverse_primer,
+        #"disable_discard_untrimmed": disable_discard_untrimmed
     }
 
     if trimming != None: config["trimming_method"] = trimming
@@ -139,6 +140,7 @@ def main():
     parser.add_argument("--emu-min-ab",help="Filter species with relative abundance below threshold; .01 = 1 percent. Default=0.0001", type=float, default=0.0001)
     parser.add_argument("--cutadapt-forward",help="Forward primer sequence to trim it with cutadapt")
     parser.add_argument("--cutadapt-reverse",help="Reverse primer sequence to trim it with cutadapt")
+    #parser.add_argument("--cutadapt-disable-discard-untrimmed",help="Deactivate cutadapt option --discard-untrimmed",actions="store_true",default=False)
     parser.add_argument("--db-info",action="store_true", help="Print available databases with version and checksum info")
     parser.add_argument("-c", "--chimera", action="store_true", help="Specify chimera flag if you want to remove chimeras")
     try: args = parser.parse_args()
@@ -159,6 +161,8 @@ def main():
     is_quiet = args.quiet
     reverse_primer = args.cutadapt_reverse
     forward_primer = args.cutadapt_forward
+    #disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
+
 
 
     # Create output directory if it doesn't exist
