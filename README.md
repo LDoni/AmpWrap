@@ -184,6 +184,13 @@ If the test goes smoothly you are ready to analyze your data
 | GTDB r202               | DADA2     | 2020-04-28     | GTDB_bac120_arc122_ssu_r202_Genus.fa.gz  | `40c1ee877ad2c5dca81e1cdf9a52ac3a` | [Download](https://zenodo.org/records/4735821/files/GTDB_bac120_arc122_ssu_r202_Genus.fa.gz?download=1) | Ali A. 2021 |
 | Greengenes2 2024.09     | DADA2     | 2024-09        | gg2_2024_09_toGenus_trainset.fa.gz       | `82a2571c9ff5009cbd2f3fded79069ed` | [Download](https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1) | Callahan, B. 2024 |
 
+## Multi Run 
+To use ampwrap short on multi run batch, we suggest to run reparately (in different filder) the workflow.
+
+It also assumes that you have trimmed the runs in the same fashion, which is what I would recommend if you are combining runs. If you didn't, but the difference is just a couple extra nts at the end of one run, you can just trim them off (eg. rownames(st2) <- substr(rownames(st2, 1, 232))). For merged reads this is less of an issue generally, as long as you used the same trimLeft parameters in each run, as differences in truncLen shouldn't affect the length of the merged sequence.
+
+https://github.com/benjjneb/dada2/issues/95
+
 
 
 
