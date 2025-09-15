@@ -15,6 +15,12 @@ amplicon_length = config["amplicon_length"]
 files = config["sample"]
 threads = config.get("threads",os.cpu_count())
 figaroname = "fvieira"
+discard_untrimmed = "--discard-untrimmed"
+disable_discard_untrimmed = config["disable_discard_untrimmed"]
+if disable_discard_untrimmed: discard_untrimmed = ""
+dada2_params = config["dada2_params"]
+param_source = config["dada2_source"]
+
 
 
 
@@ -183,7 +189,7 @@ rule cutadapt:
     shell:
         """
         mkdir -p {output_dir}/intermediate/cutadapt
-        cutadapt -g "^{params.forward_primer}" -G "^{params.reverse_primer}" --discard-untrimmed \
+        cutadapt -g "^{params.forward_primer}" -G "^{params.reverse_primer}" {discard_untrimmed} \
                  -o {output.r1_trimmed} -p {output.r2_trimmed} \
                  {input.r1} {input.r2} > {log}
         """
@@ -256,11 +262,12 @@ rule dada2_filter:
         checkout=f"{output_dir}/intermediate/dada2_filtered/checkout.filter"
     params:
         filter_script = SCRIPT_PATHS['dada2_filter']
+        dada2_params = lambda wildcards: " ".join(config.get("dada2_params", []))
     shell:
         """
         mkdir -p {output_dir}/intermediate/dada2_filtered
         Rscript {params.filter_script} \
-        {output_dir}/intermediate/cutadapt {output_dir}/intermediate/dada2_filtered {input.figaro_params}
+        {output_dir}/intermediate/cutadapt {output_dir}/intermediate/dada2_filtered {input.figaro_params} {params.dada2_params}
 
     touch {output.checkout}
         """
