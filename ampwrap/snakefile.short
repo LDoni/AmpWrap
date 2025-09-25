@@ -262,7 +262,7 @@ rule dada2_filter:
         checkout=f"{output_dir}/intermediate/dada2_filtered/checkout.filter"
     params:
         filter_script = SCRIPT_PATHS['dada2_filter'],
-        dada2_params = lambda wildcards: " ".join(config.get("dada2_params", []))
+        dada2_params = config.get("dada2_params")
     shell:
         """
         mkdir -p {output_dir}/intermediate/dada2_filtered
@@ -271,6 +271,7 @@ rule dada2_filter:
 
     touch {output.checkout}
         """
+
 
 rule dada2_error_learning:
     input:
