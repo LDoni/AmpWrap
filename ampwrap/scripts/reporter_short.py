@@ -50,10 +50,13 @@ method, database, version = tax_methods.get(
 
 
 # build up report
+start_formatted = datetime.datetime.fromisoformat(snakemake.params.start).strftime('%Y-%m-%d %H:%M:%S')
+end_formatted = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
 report = f"""
 # Report file 
-Analysis started: {snakemake.params.start}
-Analysis ended: {snakemake.params.end}
+Analysis started: {start_formatted}
+Analysis ended: {end_formatted}
 
 ## Primers
 Forward: {snakemake.params.forward_p} 

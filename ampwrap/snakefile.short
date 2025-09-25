@@ -439,7 +439,7 @@ rule reporter:
         forward_p = forward_primer,
         reverse_p = reverse_primer,
         start = start_time,
-        end = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        # end = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         taxonomy_method = assign_taxonomy_method
     script:
         SCRIPT_PATHS['reporter']
