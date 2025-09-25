@@ -120,7 +120,7 @@ def IlluminaStandard(file_):
         )
     return file_, fileName, sample, direction
 
-def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice, metainfo, extension, figaro_name, dada2_params=None,disable_discard_untrimmed):
+def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice, metainfo, extension, figaro_name, disable_discard_untrimmed, dada2_params=None):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -262,7 +262,7 @@ def main():
             sf.write(f"{sample} {direction} {file_path} {fxn.__name__}\n")
 
     config_path = write_config_yaml(
-        input_dir, output_dir, args.forward_primer, args.reverse_primer, args.amplen, args.db_choice, metainfo, extension, figaro_name,disable_discard_untrimmed
+        input_dir, output_dir, args.forward_primer, args.reverse_primer, args.amplen, args.db_choice, metainfo, extension, figaro_name, disable_discard_untrimmed, dada2_params
     )
     run_snakemake(config_path, is_quiet)
 
