@@ -14,7 +14,7 @@ truncLen <- as.numeric(figaro$trimPosition[[1]])
 maxEE <- as.numeric(figaro$maxExpectedError[[1]])
 
 # Override user params
-if (!is.null(user_params) && nchar(user_params) > 0) {
+if (!is.na(user_params)) {
     user_params_list <- strsplit(user_params, ";")[[1]]
     for (p in user_params_list) {
         keyval <- strsplit(p, "=")[[1]]
