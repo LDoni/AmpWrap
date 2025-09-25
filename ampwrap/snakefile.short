@@ -261,7 +261,7 @@ rule dada2_filter:
             index=indices),
         checkout=f"{output_dir}/intermediate/dada2_filtered/checkout.filter"
     params:
-        filter_script = SCRIPT_PATHS['dada2_filter']
+        filter_script = SCRIPT_PATHS['dada2_filter'],
         dada2_params = lambda wildcards: " ".join(config.get("dada2_params", []))
     shell:
         """
