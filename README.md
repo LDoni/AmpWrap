@@ -91,9 +91,10 @@ or
 ```sh
 conda env create -f ampwrap.yml
 ```
+
+Install AmpWrap
 ```sh
 conda activate ampwrap
-
 bash setup.sh
 ```
 
