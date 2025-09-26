@@ -20,6 +20,7 @@ disable_discard_untrimmed = config["disable_discard_untrimmed"]
 if disable_discard_untrimmed: discard_untrimmed = ""
 dada2_params = config["dada2_params"]
 param_source = config["dada2_source"]
+dry_run_tune = config.get("dry_run_tune", False)
 
 
 
@@ -116,31 +117,37 @@ def getReadFilesDict(wildcards,d=sample_d):
 
 rule all:
     input:
-        # figaro input
-        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension),
-        # FastQC initial
-        expand(f"{config['output_dir']}/QC/raw_qc_initial/{{file}}_fastqc.html", file=files),
-        f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
-        # Cutadapt
-        expand(f"{config['output_dir']}/intermediate/cutadapt/{{sample}}_trimmed_R{{index}}.fq.gz", sample=samples, index=indices),
-        expand(f"{config['output_dir']}/QC/raw_qc_post_cutadapt/{{sample}}_trimmed_R{{index}}_fastqc.html", sample=samples, index=indices),
-        f"{config['output_dir']}/QC/raw_qc_post_cutadapt/multiqc_report.html",
-        f"{config['output_dir']}/intermediate/figaro/trimParameters.json",
-        f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt",
-        # DADA2
-        expand(f"{config['output_dir']}/intermediate/dada2_filtered/{{sample}}_R{{index}}_filtered.fq.gz", sample=samples, index=indices),
-        f"{config['output_dir']}/intermediate/dada2_error_learning/err_forward_reads.rds",
-        f"{config['output_dir']}/intermediate/dada2_error_learning/err_reverse_reads.rds",
-        f"{config['output_dir']}/intermediate/merged_asvs.rds",
-        f"{config['output_dir']}/intermediate/no_chimera_asvs.rds",
-        f"{db_dir}/dada2/{out_name}",
-        #f"{db_dir}/dada2/silva_species_assignment_v138.fa.gz" if species_db != "",
-        f"{config['output_dir']}/results/ASVs.fa",
-        f"{config['output_dir']}/results/ASVs_counts.tsv",
-        f"{config['output_dir']}/results/ASVs_taxonomy.tsv",
-        f"{config['output_dir']}/results/read-count-tracking.tsv",
-        f"{config['output_dir']}/results/final_report.txt"
-
+        # se dry-run-tune, esegue solo figaro
+        expand(
+            f"{config['output_dir']}/intermediate/figaro/trimParameters.json",
+        ) if dry_run_tune else
+        # altrimenti lista completa degli output
+        [
+            # figaro input
+            *expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}",
+                    sample=sample_renamed_dict.values(), index=indices, extension=file_extension),
+            # FastQC iniziale
+            *expand(f"{config['output_dir']}/QC/raw_qc_initial/{{file}}_fastqc.html", file=files),
+            f"{config['output_dir']}/QC/raw_qc_initial/multiqc_report.html",
+            # Cutadapt
+            *expand(f"{config['output_dir']}/intermediate/cutadapt/{{sample}}_trimmed_R{{index}}.fq.gz", sample=samples, index=indices),
+            *expand(f"{config['output_dir']}/QC/raw_qc_post_cutadapt/{{sample}}_trimmed_R{{index}}_fastqc.html", sample=samples, index=indices),
+            f"{config['output_dir']}/QC/raw_qc_post_cutadapt/multiqc_report.html",
+            f"{config['output_dir']}/intermediate/figaro/trimParameters.json",
+            f"{config['output_dir']}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt",
+            # DADA2
+            *expand(f"{config['output_dir']}/intermediate/dada2_filtered/{{sample}}_R{{index}}_filtered.fq.gz", sample=samples, index=indices),
+            f"{config['output_dir']}/intermediate/dada2_error_learning/err_forward_reads.rds",
+            f"{config['output_dir']}/intermediate/dada2_error_learning/err_reverse_reads.rds",
+            f"{config['output_dir']}/intermediate/merged_asvs.rds",
+            f"{config['output_dir']}/intermediate/no_chimera_asvs.rds",
+            f"{db_dir}/dada2/{out_name}",
+            f"{config['output_dir']}/results/ASVs.fa",
+            f"{config['output_dir']}/results/ASVs_counts.tsv",
+            f"{config['output_dir']}/results/ASVs_taxonomy.tsv",
+            f"{config['output_dir']}/results/read-count-tracking.tsv",
+            f"{config['output_dir']}/results/final_report.txt"
+        ]
 
 rule input_symlink:
     input: renamed_samples2files[renamed_sample][index]
@@ -234,9 +241,10 @@ rule multiqc_final:
 
 rule figaro:
     input:
-        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}", sample=sample_renamed_dict.values(), index=indices, extension=file_extension)
+        expand(f"{config['output_dir']}/figaro_inp/{{sample}}_R{{index}}.{{extension}}",
+               sample=sample_renamed_dict.values(), index=indices, extension=file_extension)
     output:
-        trimParameters= config["output_dir"] + "/intermediate/figaro/trimParameters.json"
+        trimParameters = config["output_dir"] + "/intermediate/figaro/trimParameters.json"
     params:
         amplen = amplicon_length,
         forward_primer_length = forward_primer_length,
@@ -244,12 +252,73 @@ rule figaro:
         input_dir = f"{output_dir}/figaro_inp",
         figaroname = figaroname,
         figaro_script = SCRIPT_PATHS['figaro']
-    shell:
-        """
-        mkdir -p {output_dir}/intermediate/figaro
-        {params.figaro_script}  -i {params.input_dir} -o {output_dir}/intermediate/figaro -a {params.amplen} \
-               -f {params.forward_primer_length} -r {params.reverse_primer_length} -F {params.figaroname}  > /dev/null 2>&1
-        """
+    run:
+        import subprocess
+        import os
+        import json
+        import sys
+
+        # crea la cartella
+        os.makedirs(f"{output_dir}/intermediate/figaro", exist_ok=True)
+
+        # esegui Figaro in modo silenzioso
+        subprocess.run([
+            "python", params.figaro_script,
+            "-i", params.input_dir,
+            "-o", f"{output_dir}/intermediate/figaro",
+            "-a", str(params.amplen),
+            "-f", str(params.forward_primer_length),
+            "-r", str(params.reverse_primer_length),
+            "-F", params.figaroname
+        ], check=True)
+
+        # se dry-run, stampa solo prime 5 righe come tabella
+        if dry_run_tune:
+            try:
+                with open(output.trimParameters) as f:
+                    # Leggi l'intero file come array JSON
+                    records = json.load(f)
+                    
+                    # Verifica che sia una lista
+                    if not isinstance(records, list):
+                        records = [records]
+                    
+                    # Prendi solo i primi 5 record
+                    records = records[:5]
+
+            except json.JSONDecodeError as e:
+                print(f"Error reading JSON file: {e}", file=sys.stderr)
+                records = []
+
+            # headers
+            headers = ["trimPosition", "maxExpectedError", "readRetentionPercent", "score"]
+            print(" | ".join(headers))
+            print("-" * 60)
+
+            for rec in records:
+                # Verifica che il record sia un dizionario
+                if not isinstance(rec, dict):
+                    print(f"Warning: Skipping non-dictionary record: {rec}", file=sys.stderr)
+                    continue
+                
+                # Usa get con valori di default
+                trim_pos = rec.get('trimPosition', [])
+                max_err = rec.get('maxExpectedError', [])
+                read_ret = rec.get('readRetentionPercent', 0)
+                score = rec.get('score', 0)
+                
+                # Verifica che siano liste (per sicurezza)
+                if not isinstance(trim_pos, list):
+                    trim_pos = [trim_pos]
+                if not isinstance(max_err, list):
+                    max_err = [max_err]
+                
+                print(f"{repr(trim_pos)} | {repr(max_err)} | {read_ret} | {score}")
+
+
+
+
+
 
 rule dada2_filter:
     input:

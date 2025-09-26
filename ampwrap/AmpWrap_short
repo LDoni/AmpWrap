@@ -120,7 +120,7 @@ def IlluminaStandard(file_):
         )
     return file_, fileName, sample, direction
 
-def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice, metainfo, extension, figaro_name, disable_discard_untrimmed, dada2_params=None):
+def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice, metainfo, extension, figaro_name, disable_discard_untrimmed, dry_run_tune, dada2_params=None):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -137,7 +137,8 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
         "figaro_name": figaro_name,
         "dada2_params": dada2_params if dada2_params else "",
         "dada2_source": "user" if dada2_params else "figaro",
-        "disable_discard_untrimmed": disable_discard_untrimmed
+        "disable_discard_untrimmed": disable_discard_untrimmed,
+        "dry_run_tune": dry_run_tune
     }
 
     config_path = os.path.join(output_dir, "config.yaml")
@@ -193,6 +194,7 @@ def main():
     parser.add_argument("--db-info", action="store_true", help="Show available databases and exit")
     parser.add_argument("--cutadapt_disable_discard_untrimmed",help="Deactivate cutadapt option --discard-untrimmed",action="store_true",default=False)
     parser.add_argument("--dada2_params",type=str,help="Semicolon-separated list of DADA2 parameters to override Figaro (e.g., 'truncLen=c(240,200);maxEE=c(2,2);truncQ=2')")
+    parser.add_argument("--dry-run-tune", action="store_true", help="Run only Figaro tuning and show first 5 results, then clean up")
 
     args = parser.parse_args()
 
@@ -210,6 +212,7 @@ def main():
     output_dir = args.output_directory
     is_quiet = args.quiet
     disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
+    dry_run_tune = args.dry_run_tune
 
     if args.dada2_params:
         dada2_params = args.dada2_params.strip()
@@ -217,6 +220,15 @@ def main():
     else:
         dada2_params = None
         use_custom_dada2 = False
+
+    # Se è un dry-run, crea una directory temporanea
+    temp_output_dir = None
+    if dry_run_tune:
+        import tempfile
+        temp_output_dir = tempfile.mkdtemp(prefix="ampwrap_dryrun_")
+        print(f"Dry-run mode: using temporary directory {temp_output_dir}")
+        original_output_dir = output_dir
+        output_dir = temp_output_dir
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -262,9 +274,26 @@ def main():
             sf.write(f"{sample} {direction} {file_path} {fxn.__name__}\n")
 
     config_path = write_config_yaml(
-        input_dir, output_dir, args.forward_primer, args.reverse_primer, args.amplen, args.db_choice, metainfo, extension, figaro_name, disable_discard_untrimmed, dada2_params
-    )
+        input_dir=input_dir, 
+        output_dir=output_dir, 
+        forward_primer=args.forward_primer, 
+        reverse_primer=args.reverse_primer,
+        amplen=args.amplen, 
+        db_choice=args.db_choice, 
+        metainfo=metainfo, 
+        extension=extension, 
+        figaro_name=figaro_name,
+        disable_discard_untrimmed=disable_discard_untrimmed, 
+        dry_run_tune=dry_run_tune, 
+        dada2_params=dada2_params
+)
     run_snakemake(config_path, is_quiet)
+
+    if dry_run_tune:
+        import shutil
+        shutil.rmtree(temp_output_dir)
+        print("Dry-run completed. Temporary files cleaned up.")
+
 
 if __name__ == "__main__":
     main()
