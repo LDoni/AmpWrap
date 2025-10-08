@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import pandas as pd
 import json
-from datetime import datetime
+import datetime
+import time
+
 
 # Lread input
 df1 = pd.read_table(snakemake.input.cutadapt)
