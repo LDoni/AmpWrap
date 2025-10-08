@@ -8,6 +8,7 @@ options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 suppressPackageStartupMessages(library(biomformat))
 suppressPackageStartupMessages(library(phyloseq))
+suppressPackageStartupMessages(library(Biostrings))
 # Carica dati senza chimere
 seqtab_nochim <- readRDS(input)
 
@@ -76,4 +77,5 @@ ps <- phyloseq(
 # Salva oggetto phyloseq
 saveRDS(ps, file.path(output_dir, "phyloseq_object.rds"))                            
 options(warn=0)
+
 
