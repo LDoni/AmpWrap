@@ -272,7 +272,8 @@ rule figaro:
             "-f", str(params.forward_primer_length),
             "-r", str(params.reverse_primer_length),
             "-F", params.figaroname
-        ], check=True)
+        ], check=True,stdout=subprocess.DEVNULL,
+           stderr=subprocess.DEVNULL)
 
         # se dry-run, stampa solo prime 5 righe come tabella
         if dry_run_tune:
