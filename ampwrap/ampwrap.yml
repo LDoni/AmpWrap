@@ -26,6 +26,7 @@ dependencies:
   - bioconductor-biobase=2.62.0=r43ha9d7317_3
   - bioconductor-biocgenerics=0.48.1=r43hdfd78af_2
   - bioconductor-biocparallel=1.36.0=r43hf17093f_2
+  - bioconductor-biomformat
   - bioconductor-biostrings=2.70.1=r43ha9d7317_2
   - bioconductor-dada2=1.30.0=r43hf17093f_0
   - bioconductor-data-packages=20250105.1=hdfd78af_0
