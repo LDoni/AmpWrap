@@ -38,6 +38,7 @@ dependencies:
   - bioconductor-genomicranges=1.54.1=r43ha9d7317_2
   - bioconductor-iranges=2.36.0=r43ha9d7317_2
   - bioconductor-matrixgenerics=1.14.0=r43hdfd78af_3
+  - bioconductor-phyloseq
   - bioconductor-rhtslib=2.4.0=r43ha9d7317_2
   - bioconductor-rsamtools=2.18.0=r43hf17093f_2
   - bioconductor-s4arrays=1.2.0=r43ha9d7317_2
