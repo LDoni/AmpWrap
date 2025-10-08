@@ -254,6 +254,7 @@ def main():
     if not metainfo:
         print(
         "ERROR: Files do not follow any recognized naming convention!\n\n"
+        f"Your file naming: {files[0]}\n\n"
         "Please rename your FASTQ files.\n\n"
         "Supported input formats:\n"
         "  1) Illumina standard:\n"

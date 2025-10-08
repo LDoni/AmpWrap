@@ -48,6 +48,10 @@ method, database, version = tax_methods.get(
     ("Unknown", snakemake.params.taxonomy_method, "")
 )
 
+# ampwrap info
+workflow_file = snakemake.params.workflow_file
+version = snakemake.params.version
+
 
 # build up report
 start_formatted = datetime.datetime.fromisoformat(snakemake.params.start).strftime('%Y-%m-%d %H:%M:%S')
@@ -72,6 +76,10 @@ max_expected_error: {max_expected_error}
 ## Taxonomy annotation
 Method: {method}
 Database: {database}
+Version: {version}
+
+## Ampwrap info
+Workflow: {workflow_file}
 Version: {version}
 
 ## Citation

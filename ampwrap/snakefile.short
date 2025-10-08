@@ -2,6 +2,8 @@ import os
 import glob
 import datetime
 
+version = "1.0.0"
+
 # Directories and parameters
 start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 input_dir = config["input_dir"]
@@ -509,6 +511,8 @@ rule reporter:
         forward_p = forward_primer,
         reverse_p = reverse_primer,
         start = start_time,
+        workflow_file = workflow.snakefile,
+	version = version,
         # end = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         taxonomy_method = assign_taxonomy_method
     script:
