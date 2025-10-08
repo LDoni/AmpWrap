@@ -6,7 +6,8 @@ silva_db <- args[2]
 output_dir <- args[3]
 options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
-
+suppressPackageStartupMessages(library(biomformat))
+suppressPackageStartupMessages(library(phyloseq))
 # Carica dati senza chimere
 seqtab_nochim <- readRDS(input)
 
@@ -49,4 +50,30 @@ rownames(asv_tax) <- gsub(pattern = ">", replacement = "", x = asv_headers)
 
 # Salva la tabella della tassonomia
 write.table(asv_tax, file.path(output_dir, "ASVs_taxonomy.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)
+
+
+
+# Crea oggetto BIOM
+# Assicurati che i nomi delle righe siano consistenti
+rownames(asv_tab) <- gsub(pattern = ">", replacement = "", x = asv_headers)
+rownames(asv_tax) <- rownames(asv_tab)
+
+# Crea oggetto biom
+biom_obj <- biomformat::make_biom(
+  data = asv_tab,
+  observation_metadata = asv_tax
+)
+
+# Salva file BIOM
+biomformat::write_biom(biom_obj, file.path(output_dir, "ASVs.biom"))
+
+# Crea oggetto phyloseq
+ps <- phyloseq(
+  otu_table(asv_tab, taxa_are_rows = TRUE),
+  tax_table(asv_tax)
+)
+
+# Salva oggetto phyloseq
+saveRDS(ps, file.path(output_dir, "phyloseq_object.rds"))                            
 options(warn=0)
+
