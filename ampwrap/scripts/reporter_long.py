@@ -14,7 +14,6 @@ df_post = pd.read_table(seqkit_post)
 
 # Extract sample names
 df_pre["sample"] = df_pre["file"].apply(lambda x: x.split("/")[-1].replace(".fastq", ""))
-#df_post["sample"] = df_post["file"].apply(lambda x: x.split("/")[-1].replace("-nanofilt.fastq", ""))
 df_post["sample"] = df_post["file"].apply(
     lambda x: x.split("/")[-1]
                     .replace("-nanofilt.fastq", "")

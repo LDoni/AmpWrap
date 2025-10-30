@@ -2,38 +2,71 @@
 import pandas as pd
 import json
 import datetime
-import time
+import os
+import glob
+
+output_dir = snakemake.params.output_dir if "output_dir" in snakemake.params else os.path.dirname(snakemake.output.report)
+
+main_dir = os.path.dirname(output_dir)
+
+run_dirs = sorted(glob.glob(os.path.join(main_dir, "run*")))
+if not run_dirs:
+    raise FileNotFoundError(f"No run directories found in {output_dir}")
+
+run_reports = []
+dada2_params = snakemake.params["dada2_params"]
+
+for run_dir in run_dirs:
+    cutadapt_log_files = glob.glob(os.path.join(run_dir, "intermediate/cutadapt/cutadapt_summary.log"))
+    dada2_files = glob.glob(os.path.join(main_dir, "**/read-count-tracking.tsv"), recursive=True)
+    figaro_files = glob.glob(os.path.join(run_dir, "intermediate/figaro/trimParameters.json"))
+
+    print(f"DEBUG: Run {os.path.basename(run_dir)}")
+    print(f"  Cutadapt: {cutadapt_log_files}")
+    print(f"  DADA2: {dada2_files}")
+    print(f"  Figaro: {figaro_files}")
+
+    if not cutadapt_log_files or not dada2_files or not figaro_files:
+        raise FileNotFoundError(f"Missing files in {run_dir}:\n"
+                                f"Cutadapt: {cutadapt_log_files}\n"
+                                f"DADA2: {dada2_files}\n"
+                                f"Figaro: {figaro_files}")
 
 
-# Lread input
-df1 = pd.read_table(snakemake.input.cutadapt)
-df2 = pd.read_table(snakemake.input.dada2)
-df2["total_retained"] = df2["total_retained"].apply(lambda x: f"{x}%")
+    cutadapt_log = cutadapt_log_files[0]
+    dada2_file = dada2_files[0]
+    figaro_json = figaro_files[0]
 
-# merge the  dataframe
-df = pd.merge(df1, df2, on="sample")
-new_columns = pd.MultiIndex.from_tuples([
-    ("cutadapt", "reads retained"),
-    ("cutadapt", "bps retained"),
-    ("dada2", "reads.in"),
-    ("dada2", "reads.out"),
-    ("dada2", "dadaF"),
-    ("dada2", "dadaR"),
-    ("dada2", "merged"),
-    ("dada2", "nonchim"),
-    ("dada2", "total_retained"),
-])
-df_multi = df.set_index("sample")
-df_multi.columns = new_columns
+    df1 = pd.read_table(cutadapt_log, delim_whitespace=True)
+    df2 = pd.read_table(dada2_file).loc[:,["sample","reads.in","nonchim","total_retained"]]
+    df2["total_retained"] = df2["total_retained"].apply(lambda x: f"{x}%")
+    df = pd.merge(df1, df2, on="sample", how="inner")
 
-# read   parametri   Figaro
-with open(snakemake.input.figaro_json, "r") as fh:
-    data = json.load(fh)
-d = data[0]
-trim_position = f"forward:{d['trimPosition'][0]}, reverse:{d['trimPosition'][1]}"
-max_expected_error = f"forward:{d['maxExpectedError'][0]}, reverse:{d['maxExpectedError'][1]}"
+    new_columns = pd.MultiIndex.from_tuples([
+        ("cutadapt", "reads_retained"),
+        ("cutadapt", "bps_retained"),
+        ("dada2", "input"),
+        ("dada2", "nonchim"),
+        ("dada2", "total_retained"),
+    ])
+    df_multi = df.set_index("sample")
+    df_multi.columns = new_columns
 
-# tax info
+    # Figaro parameters
+    with open(figaro_json, "r") as fh:
+        data = json.load(fh)
+    d = data[0]
+    trim_position = f"forward:{d['trimPosition'][0]}, reverse:{d['trimPosition'][1]}"
+    max_expected_error = f"forward:{d['maxExpectedError'][0]}, reverse:{d['maxExpectedError'][1]}"
+
+    run_reports.append({
+        "run": os.path.basename(run_dir),
+        "df_multi": df_multi,
+        "trim_position": trim_position,
+        "max_expected_error": max_expected_error
+    })
+
+# Taxonomy info
 tax_methods = {
     "decipher_silva138": ("DECIPHER", "Silva", "138"),
     "decipher_gtdb226": ("DECIPHER", "GTDB", "226"),
@@ -44,41 +77,65 @@ tax_methods = {
     "dada2_RefSeq_RDPv16": ("DADA2", "RefSeq+RDP", "v16"),
     "dada2_GTDB_r202": ("DADA2", "GTDB", "r202"),
 }
+method, database, db_version = tax_methods.get(snakemake.params.taxonomy_method, ("Unknown", "Unknown", "Unknown"))
 
-method, database, version = tax_methods.get(
-    snakemake.params.taxonomy_method,
-    ("Unknown", snakemake.params.taxonomy_method, "")
-)
-
-# ampwrap info
+# Info workflow
 workflow_file = snakemake.params.workflow_file
 version = snakemake.params.version
-
-
-# build up report
 start_formatted = datetime.datetime.fromisoformat(snakemake.params.start).strftime('%Y-%m-%d %H:%M:%S')
 end_formatted = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+
+def getDada2Params(dada2_params):
+    params_list = [p.strip() for p in dada2_params.split(";") if p.strip()]
+
+    formatted_lines = []
+    for param in params_list:
+        if "=" in param:
+            key, val = param.split("=", 1)
+            formatted_lines.append(f"{key.strip()}: {val.strip()}")
+        else:
+            formatted_lines.append(param.strip())
+
+    return "\n".join(formatted_lines)
+
+report_sections = []
+for r in run_reports:
+    if dada2_params:
+        parameters = f"""
+### DADA2 User parameters
+{getDada2Params(dada2_params)}
+"""
+    else:
+        parameters = f"""
+### DADA2 Figaro parameters
+trim_position: {r['trim_position']}
+max_expected_error: {r['max_expected_error']}
+"""
+
+    section = f"""
+## Run {r['run']}
+{parameters}
+### Denoising stats
+{r['df_multi'].to_string(index=True)}
+"""
+    report_sections.append(section)
+
 report = f"""
-# Report file 
+# Report file
 Analysis started: {start_formatted}
 Analysis ended: {end_formatted}
 
 ## Primers
-Forward: {snakemake.params.forward_p} 
+Forward: {snakemake.params.forward_p}
 Reverse: {snakemake.params.reverse_p}
 
-## Figaro parameters
-trim_position: {trim_position}
-max_expected_error: {max_expected_error}
-
-## Denoising stats:
-{df_multi.to_string(index=True)}
+{''.join(report_sections)}
 
 ## Taxonomy annotation
 Method: {method}
 Database: {database}
-Version: {version}
+Version: {db_version}
 
 ## Ampwrap info
 Workflow: {workflow_file}
@@ -88,5 +145,8 @@ Version: {version}
 generated by AmpWrap short
 https://github.com/LDoni/AmpWrap
 """
+
 with open(snakemake.output.report, "w") as f:
     f.write(report)
+
+print(f"Report written to {snakemake.output.report}")

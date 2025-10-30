@@ -9,9 +9,7 @@ import subprocess
 import re
 from colorama import Fore, Style
 
-# -------------------------------
 # DATABASE TABLE
-# -------------------------------
 DB_TABLE = [
     ["Database Name", "Source", "Version / Date", "File Name", "MD5", "Download Link"],
     ["SILVA SSU r138.2", "DECIPHER", "2024", "SILVA_SSU_r138_2_2024.RData", "4e272e39c2d71f5d3e7a31b00dbb1df4", "https://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2_2024.RData"],
@@ -21,7 +19,9 @@ DB_TABLE = [
     ["SILVA v138.2", "DADA2", "2025", "silva_nr99_v138.2_toGenus_trainset.fa.gz", "1764e2a36b4500ccb1c7d5261948a414", "https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1"],
     ["RefSeq+RDP v16", "DADA2", "2020-06-11", "RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz", "53aac0449c41db387d78a3c17b06ad07", "https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1"],
     ["GTDB r202", "DADA2", "2020-04-28", "GTDB_bac120_arc122_ssu_r202_Genus.fa.gz", "40c1ee877ad2c5dca81e1cdf9a52ac3a", "https://zenodo.org/records/4735821/files/GTDB_bac120_arc122_ssu_r202_Genus.fa.gz?download=1"],
-    ["Greengenes2 2024.09", "DADA2", "2024-09", "gg2_2024_09_toGenus_trainset.fa.gz", "82a2571c9ff5009cbd2f3fded79069ed", "https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1"]
+    ["Greengenes2 2024.09", "DADA2", "2024-09", "gg2_2024_09_toGenus_trainset.fa.gz", "82a2571c9ff5009cbd2f3fded79069ed", "https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1"],
+    ["PR2 version 5.1.1", "DADA2", "2025-10", "pr2_version_5.1.1_SSU_dada2.fasta.gz", "cab726022035241ce1f05a24dd3ef707", "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz"],
+    ["DADA2 18S Silva V132", "DADA2", "2024-01", "DADA2_silva_v132_18S.fa", "3bbab8029675474805d1a5d24cf23bb9","https://zenodo.org/records/10444891/files/DADA2_silva_v132_18S.fa?download=1"]
 ]
 
 DB_CHOICES = [
@@ -32,12 +32,13 @@ DB_CHOICES = [
     "dada2_RDP_genus19",
     "dada2_GG2_genus09",
     "dada2_RefSeq_RDPv16",
-    "dada2_GTDB_r202"
+    "dada2_GTDB_r202",
+    "dada2_pr2_5.1.1",
+    "dada2_18S_silva132"
 ]
 
-# -------------------------------
 # UTILS
-# -------------------------------
+
 def print_banner():
     banner = """
 
@@ -63,7 +64,6 @@ def print_banner():
 def print_db_table():
     col_widths = [max(len(str(row[i])) for row in DB_TABLE) for i in range(len(DB_TABLE[0]))]
     sep = "| " + " | ".join("-"*w for w in col_widths) + " |"
-    # Header
     header = "| " + " | ".join(str(DB_TABLE[0][i]).ljust(col_widths[i]) for i in range(len(DB_TABLE[0]))) + " |"
     print(header)
     print(sep)
@@ -74,7 +74,7 @@ def print_db_table():
 def check_special_primers(forward, reverse):
      if forward.upper() == "CCTACGGGNGGCWGCAG" and reverse.upper() == "GACTACHVGGGTATCTAATCC":
         print(Fore.RED + """
-⚠️  You might encounter an issue when setting the -l parameter due to variation
+   You might encounter an issue when setting the -l parameter due to variation
    in the lengths of 16S rRNA amplicon segments. While this variation is not
    large, it does exist. In particular, there are two predominant V3-V4 fragment
    lengths in nature:
@@ -83,7 +83,6 @@ def check_special_primers(forward, reverse):
       • ~440 nts
 
 Choosing the Correct -l Parameter
---------------------------------
 To account for this variation, consider checking which option is better for your analysis:
 
    -l 444 → 464 - 38 (primers)
@@ -120,7 +119,8 @@ def IlluminaStandard(file_):
         )
     return file_, fileName, sample, direction
 
-def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice, metainfo, extension, figaro_name, disable_discard_untrimmed, dry_run_tune, dada2_params=None):
+def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice,
+metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untrimmed, dry_run_tune, dada2_params=None):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -137,6 +137,7 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
         "figaro_name": figaro_name,
         "dada2_params": dada2_params if dada2_params else "",
         "dada2_source": "user" if dada2_params else "figaro",
+        "cutadapt_trim_by_length": cutadapt_trim_by_length,
         "disable_discard_untrimmed": disable_discard_untrimmed,
         "dry_run_tune": dry_run_tune
     }
@@ -147,11 +148,11 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
 
     return config_path
 
-def run_snakemake(config_path, is_quiet=False):
+def run_snakemake(config_path, is_quiet=False,until=None):
     conda_bin_dir = os.path.join(os.environ['CONDA_PREFIX'], 'bin')
     snakefile_path = os.path.join(conda_bin_dir, 'snakefile.short')
 
-    print(f"Cerco Snakefile in: {snakefile_path}")
+    print(f"Search Snakefile in: {snakefile_path}")
     if not os.path.exists(snakefile_path):
         print(f"ERROR: snakefile.short not found in {conda_bin_dir}")
         sys.exit(1)
@@ -167,6 +168,9 @@ def run_snakemake(config_path, is_quiet=False):
     if is_quiet:
         args += ["--quiet", "all"]
 
+    if until!=None:
+        args += ["--until", until]
+
     print("Let's Go:", " ".join(args))
 
     try:
@@ -175,16 +179,26 @@ def run_snakemake(config_path, is_quiet=False):
         print(f"ERROR in Snakemake: {e}")
         sys.exit(1)
 
-# -------------------------------
-# MAIN
-# -------------------------------
+def merge_multiple_runs(run_output_dirs, config_path, final_output_dir):
+    subprocess.run([
+    "snakemake",
+    "--snakefile", "snakefile.short",
+    "--configfile", f"{config_path}",
+    "--config",
+    f"output_dir={final_output_dir}",
+    f"run_dirs={' '.join(run_output_dirs)}"
+    ])
+
+
+
 def main():
     print_banner()
 
     parser = argparse.ArgumentParser(
         description="ampwrap_short: process raw sequencing files and assign taxonomy."
     )
-    parser.add_argument("-i", "--input_directory", help="Input directory with raw fq/fq.gz/fastq/fastq.gz files")
+    parser.add_argument("-i", "--input_directory", nargs="+",
+			help="Input directory with raw fq/fq.gz/fastq/fastq.gz files, add multiple space-separated paths for multiple runs e.g. -i path/to/run1 path/to/run2 path/to/run3")
     parser.add_argument("-a", "--forward_primer",  help="Forward primer sequence")
     parser.add_argument("-A", "--reverse_primer",  help="Reverse primer sequence")
     parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "ampwrap_short"), help="Output directory (default: ./ampwrap_short)")
@@ -192,13 +206,13 @@ def main():
     parser.add_argument("-d", "--db_choice", default="dada2_silva_genus138", help="Database for taxonomy assignment. Choices:\n" + "\n".join(DB_CHOICES))
     parser.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
     parser.add_argument("--db-info", action="store_true", help="Show available databases and exit")
+    parser.add_argument("--cutadapt_trim_by_length",help="Cutadapt trim primers by length",action="store_true",default=False)
     parser.add_argument("--cutadapt_disable_discard_untrimmed",help="Deactivate cutadapt option --discard-untrimmed",action="store_true",default=False)
-    parser.add_argument("--dada2_params",type=str,help="Semicolon-separated list of DADA2 parameters to override Figaro (e.g., 'truncLen=c(240,200);maxEE=c(2,2);truncQ=2')")
+    parser.add_argument("--dada2_params",type=str,help="Semicolon-separated list of DADA2 parameters to override Figaro (e.g., 'truncLen=c(240,200);maxEE=c(2,2)'")
     parser.add_argument("--dry-run-tune", action="store_true", help="Run only Figaro tuning and show first 5 results, then clean up")
 
     args = parser.parse_args()
 
-    # --db-info
     if args.db_info:
         print_db_table()
         sys.exit(0)
@@ -208,11 +222,13 @@ def main():
         sys.exit(1)
 
     check_special_primers(args.forward_primer, args.reverse_primer)
-    input_dir = args.input_directory
+    input_dirs = args.input_directory
+    all_run_outputs = []
     output_dir = args.output_directory
     is_quiet = args.quiet
     disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
     dry_run_tune = args.dry_run_tune
+    cutadapt_trim_by_length = args.cutadapt_trim_by_length
 
     if args.dada2_params:
         dada2_params = args.dada2_params.strip()
@@ -221,7 +237,7 @@ def main():
         dada2_params = None
         use_custom_dada2 = False
 
-    # Se è un dry-run, crea una directory temporanea
+    # if it is dry-run,new temp directory
     temp_output_dir = None
     if dry_run_tune:
         import tempfile
@@ -233,67 +249,67 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     file_patterns = ["*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
-    files = [file for pattern in file_patterns for file in glob.glob(os.path.join(input_dir, pattern))
-             if re.search(r"_[Rr][12](?:_|\.)", file)]
-    if not files:
-        print("No matching files found in the input directory.")
-        sys.exit(1)
 
-    extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
 
-    figaro_name = None
     metainfo = []
-    for fxn in (IlluminaStandard, FVieiraStandard):
-        try:
-            metainfo = [fxn(f) for f in files]
-        except ValueError:
+
+    for i,input_dir in enumerate(input_dirs,1):
+        print(f"\n🔹 Processing run: {input_dir}")
+
+        run_name = f"run_{i}" #os.path.basename(os.path.normpath(input_dir))
+        run_output_dir = output_dir
+        os.makedirs(run_output_dir, exist_ok=True)
+
+        # search  fastq/fq.gz
+        file_patterns = ["*.fq", "*.fq.gz", "*.fastq", "*.fastq.gz"]
+        files = [
+            file
+            for pattern in file_patterns
+            for file in glob.glob(os.path.join(input_dir, pattern))
+            if re.search(r"_[Rr][12](?:_|\.)", file)
+        ]
+        if not files:
+            print(f" No matching files found in {input_dir}, skipping.")
             continue
-        else:
-            break
 
-    if not metainfo:
-        print(
-        "ERROR: Files do not follow any recognized naming convention!\n\n"
-        f"Your file naming: {files[0]}\n\n"
-        "Please rename your FASTQ files.\n\n"
-        "Supported input formats:\n"
-        "  1) Illumina standard:\n"
-        "       <group>_<sample>_S##_L###_R[12]_001.(fastq|fq)[.gz]\n"
-        "       Example: Project_SampleA_S1_L001_R1_001.fastq.gz\n\n"
-        "  2) Custom format:\n"
-        "       <sample>_[Rr][12].(fastq|fq)[.gz]\n"
-        "       Example: SampleA_R1.fastq.gz; S1_r1.fq"
-    )
-        sys.exit(1)
+        extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
 
-    sample_tab_path = os.path.join(output_dir, "sample.tab")
+        figaro_name = None
+        for fxn in (IlluminaStandard, FVieiraStandard):
+                try:
+                        metainfo += [(*fxn(f),run_name) for f in files]
+                except ValueError:
+                        continue
+                else:
+                        break
+
+        if not metainfo:
+            print(f"ERROR: Files in {input_dir} do not follow any recognized naming convention.")
+            continue
+
+    sample_tab_path = os.path.join(run_output_dir, "sample.tab")
     with open(sample_tab_path, "w") as sf:
         for t in metainfo:
-            file_path, fileName, sample, direction = t
+            file_path, fileName, sample, direction, run_name = t
             file_path = os.path.abspath(file_path)
             figaro_name = fxn.__name__
-            sf.write(f"{sample} {direction} {file_path} {fxn.__name__}\n")
+            sf.write(f"{sample} {direction} {file_path} {fxn.__name__} {run_name}\n")
 
     config_path = write_config_yaml(
-        input_dir=input_dir, 
-        output_dir=output_dir, 
-        forward_primer=args.forward_primer, 
-        reverse_primer=args.reverse_primer,
-        amplen=args.amplen, 
-        db_choice=args.db_choice, 
-        metainfo=metainfo, 
-        extension=extension, 
-        figaro_name=figaro_name,
-        disable_discard_untrimmed=disable_discard_untrimmed, 
-        dry_run_tune=dry_run_tune, 
-        dada2_params=dada2_params
-)
+                input_dir=input_dir,
+                output_dir=run_output_dir,
+                forward_primer=args.forward_primer,
+                reverse_primer=args.reverse_primer,
+                amplen=args.amplen,
+                db_choice=args.db_choice,
+                metainfo=metainfo,
+                extension=extension,
+                figaro_name=figaro_name,
+                cutadapt_trim_by_length=cutadapt_trim_by_length,
+                disable_discard_untrimmed=disable_discard_untrimmed,
+                dry_run_tune=dry_run_tune,
+                dada2_params=dada2_params)
     run_snakemake(config_path, is_quiet)
-
-    if dry_run_tune:
-        import shutil
-        shutil.rmtree(temp_output_dir)
-        print("Dry-run completed. Temporary files cleaned up.")
 
 
 if __name__ == "__main__":

@@ -2,9 +2,11 @@ import os
 from datetime import datetime
 
 # Configure input output directories
+latency_wait = 20
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
 sample_names = config["sample_names"]
+print(sample_names)
 file_extension = config["file_extension"]
 trimming_method = config.get("trimming_method")
 tax_db = config["tax_db"]
@@ -14,6 +16,9 @@ cpus = int(config["threads"])
 #to_cutadapt = all(p in config and config[p] not in [None, ""] for p in ["forward_primer", "reverse_primer"])
 chimera = config.get("chimera", None)
 suffix = "scrubbed" if chimera else "nanofilt"
+keepcounts = "" if not config.get("keep_counts",False) else "--keep-counts"
+
+
 
 to_cutadapt = all(
     p in config and config[p] not in [None, "", "null", "None"]
@@ -29,10 +34,11 @@ def getCutAdaptInput(wildcards):
         return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq.gz"})
 
 def getNanoFiltInput(wildcards):
-        if to_cutadapt == True: return({"fq":f"{output_dir}/intermediate/cutadapt/{wildcards.sample}_cutadapt.fq.gz"})
+        raw_sample = wildcards.sample.replace("-nanofilt", "")
+        if to_cutadapt == True: return({"fq":f"{output_dir}/intermediate/cutadapt/{raw_sample}_cutadapt.fq.gz"})
         else:
-            if trimming_method != None: return({"fq":f"{output_dir}/intermediate/porechop/{wildcards.sample}-porechop.fastq.gz"})
-            else: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
+            if trimming_method != None: return({"fq":f"{output_dir}/intermediate/porechop/{raw_sample}-porechop.fastq.gz"})
+            else: return({"fq":f"{input_dir}/{raw_sample}.{file_extension}"})
 
 def getEmuInput(wildcards):
         if chimera == True: return({"fastq":f"{output_dir}/intermediate/nanofilt/{wildcards.sample}-scrubbed.fastq"})
@@ -43,7 +49,7 @@ nl_min_len = config.get("nl_min_len",1200)
 nl_max_len = config.get("nl_max_len",1800)
 nl_min_qual = config.get("nl_min_qual",10)
 
-# emu parametesrs
+# emu parameters
 
 emu_min_ab = config.get("emu_min_ab", 0.0001)
 
@@ -79,13 +85,15 @@ rule all:
         expand(f"{config['output_dir']}/QC/raw_qc_post/{{sample}}-nanofilt_fastqc.html", sample=sample_names),
         f"{config['output_dir']}/QC/raw_qc_post/multiqc_report.html",
         f"{config['output_dir']}/QC/raw_qc_post/readcount/filtered_reads_counts.txt",
-        expand(f"{config['output_dir']}/intermediate/nanofilt/{{sample}}-scrubbed.fastq", sample=sample_names) if chimera else [],
+        expand(f"{config['output_dir']}/intermediate/nanofilt/{{sample}}-{suffix}.fastq", sample=sample_names) if chimera else [],
         #emuDB
         f"{db_dir}",
         expand("{db_dir}/{tax_file}",db_dir=db_dir,tax_file=["taxonomy.tsv","species_taxid.fasta"]),
         #emu
-        #expand(f"{output_dir}/results/emu/{{sample}}-nanofilt_rel-abundance.tsv", sample=sample_names),
-        expand(f"{output_dir}/results/emu/{{sample}}-{suffix}_rel-abundance.tsv", sample=sample_names, suffix=suffix),
+        expand(f"{output_dir}/results/emu/{{sample}}-{suffix}_rel-abundance.tsv", sample=sample_names),
+        #handoff
+        f"{output_dir}/results/emu/emu_phyloseq.rds",
+        f"{output_dir}/results/emu/emu_abundance.biom",
         #final report
         f"{config['output_dir']}/results/final_report.txt"
 
@@ -208,19 +216,6 @@ rule multiqc_post:
         multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1
         """
 
-#rule seqkit_stats_post_qc:
-#    input:
-#        expand("{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
-#               output_dir=output_dir,
-#               sample=sample_names)
-#    output:
-#        "{output_dir}/QC/raw_qc_post/readcount/filtered_reads_counts.txt"
-#    shell:
-#        """
-#        mkdir -p $(dirname {output})
-#        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-nanofilt.fastq > {output}
-#        """
-
 rule chimera_scrub:
     input:
         fq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
@@ -253,6 +248,36 @@ rule seqkit_stats_post_qc:
         """
 
 
+#rule emu_database:
+#    output:
+#        the_dir=directory(f"{db_dir}"),
+#        taxonomy=f"{db_dir}/taxonomy.tsv",
+#        taxids=f"{db_dir}/species_taxid.fasta"
+#    params:
+#        md5_dict={
+#            "emu": "707f235f515c0dc2e8d74278294241e7",
+#            "rdp": "5aebf4f791d32950bfa07e5e0e7ea22a",
+#            "silva": "4195810ceec63ed13b9ee3f9c678c52b"
+#        }
+#    run:
+#        import os
+#        db_tar = f"{db_dir}/{tax_db}.tar"
+#        os.makedirs(output.the_dir, exist_ok=True)
+
+        # download file
+#        shell(f"osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_tar}")
+
+        # MD5 check
+#        expected_md5 = params.md5_dict[tax_db]
+#        import subprocess
+#        result = subprocess.run(f"echo '{expected_md5}  {db_tar}' | md5sum -c -", shell=True)
+#        if result.returncode != 0:
+#            raise ValueError(f"ERROR: MD5 checksum failed for {db_tar}")
+
+        #  tar extraction
+#        shell(f"tar -xvf {db_tar} -C {output.the_dir} > /dev/null 2>&1")
+
+
 rule emu_database:
     output:
         the_dir=directory(f"{db_dir}"),
@@ -262,48 +287,69 @@ rule emu_database:
         md5_dict={
             "emu": "707f235f515c0dc2e8d74278294241e7",
             "rdp": "5aebf4f791d32950bfa07e5e0e7ea22a",
-            "silva": "4195810ceec63ed13b9ee3f9c678c52b"
+            "silva": "4195810ceec63ed13b9ee3f9c678c52b",
+            "pr2": "51e1c9eb383e8770d1ccdf805b35444f"
         }
     run:
         import os
-        db_tar = f"{db_dir}/{tax_db}.tar"
+        import subprocess
         os.makedirs(output.the_dir, exist_ok=True)
 
-        # Scarica il file
-        shell(f"osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_tar}")
+        if tax_db == "pr2":
+            db_zip = f"{db_dir}/pr2_version_5.1.1_emu.zip"
+            db_url = "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_emu.zip"
 
-        # MD5 check
-        expected_md5 = params.md5_dict[tax_db]
-        import subprocess
-        result = subprocess.run(f"echo '{expected_md5}  {db_tar}' | md5sum -c -", shell=True)
-        if result.returncode != 0:
-            raise ValueError(f"ERROR: MD5 checksum failed for {db_tar}")
+            shell(f"wget -O {db_zip} {db_url}")
+            # md5 check
+            expected_md5 = params.md5_dict["pr2"]
+            result = subprocess.run(f"echo '{expected_md5}  {db_zip}' | md5sum -c -", shell=True)
+            if result.returncode != 0:
+                raise ValueError(f"ERROR: MD5 checksum failed for {db_zip}")
+            # unzip
+            shell(f"unzip -o {db_zip} -d {output.the_dir}")
 
-        # Estrai il tar
-        shell(f"tar -xvf {db_tar} -C {output.the_dir} > /dev/null 2>&1")
+        else:
+            db_tar = f"{db_dir}/{tax_db}.tar"
+            shell(f"osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_tar}")
+            # md5 check
+            expected_md5 = params.md5_dict[tax_db]
+            result = subprocess.run(f"echo '{expected_md5}  {db_tar}' | md5sum -c -", shell=True)
+            if result.returncode != 0:
+                raise ValueError(f"ERROR: MD5 checksum failed for {db_tar}")
 
-
+            shell(f"tar -xvf {db_tar} -C {output.the_dir} > /dev/null 2>&1")
 
 
 rule emu_abundance:
     input:
-        #fastq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq",
-        #db=lambda wildcards: f"db_s/emu/{config['tax_db']}" # "db_s/emu/{tax_db}"
         unpack(getEmuInput)
     output:
-        "{output_dir}/results/emu/{sample}-nanofilt_rel-abundance.tsv",
+        "{output_dir}/results/emu/{sample}-{suffix}_rel-abundance.tsv",
     params:
         type='map-ont',
         min_ab=emu_min_ab,
-        db=lambda wildcards: f"db_s/emu/{config['tax_db']}" # "db_s/emu/{tax_db}"
+        db=lambda wildcards: f"db_s/emu/{config['tax_db']}",
+        keepcounts=keepcounts
     threads:
         cpus
     shell:
         """
         mkdir -p {output_dir}/results/emu
-        emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab}
+        echo emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts}
+        emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts}
         """
 
+rule emu_phyloseq:
+    input:
+        expand("{output_dir}/results/emu/{sample}-{suffix}_rel-abundance.tsv",
+               output_dir=output_dir, sample=sample_names, suffix=suffix)
+    output:
+        "{output_dir}/results/emu/emu_phyloseq.rds",
+        "{output_dir}/results/emu/emu_abundance.biom"
+    params:
+        emu_dir=lambda wildcards: f"{output_dir}/results/emu"
+    script:
+        "scripts/emu_handoff.R"
 
 rule reporter:
     input:

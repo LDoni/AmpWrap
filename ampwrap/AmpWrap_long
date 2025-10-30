@@ -38,12 +38,8 @@ def print_banner():
 
 
 
-
-
-
-
-
-def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, forward_primer, reverse_primer, chimera):
+def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, 
+                      emu_min_ab, forward_primer, reverse_primer, chimera, keep_counts):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -59,7 +55,7 @@ def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names,
         "emu_min_ab": emu_min_ab,
         "forward_primer": forward_primer,
         "reverse_primer": reverse_primer,
-        #"disable_discard_untrimmed": disable_discard_untrimmed
+        "keep_counts": keep_counts,
     }
 
     if trimming != None: config["trimming_method"] = trimming
@@ -108,7 +104,8 @@ def print_db_info():
     dbs = [
         {"name": "RDP v11.5", "file": "rdp.tar", "md5": "5aebf4f791d32950bfa07e5e0e7ea22a"},
         {"name": "SILVA v138.1", "file": "silva.tar", "md5": "4195810ceec63ed13b9ee3f9c678c52b"},
-        {"name": "EMU v3.0", "file": "emu.tar", "md5": "707f235f515c0dc2e8d74278294241e7"}
+        {"name": "EMU v3.0", "file": "emu.tar", "md5": "707f235f515c0dc2e8d74278294241e7"},
+        {"name": "PR2 v5.1.1", "file": "pr2_version_5.1.1_emu.zip", "md5": "51e1c9eb383e8770d1ccdf805b35444f"}
     ]
     print("Database Name\tFile Name\tMD5")
     for db in dbs:
@@ -130,27 +127,42 @@ def main():
     parser = argparse.ArgumentParser(description="Process raw sequencing files for downstream analysis.")
     parser.add_argument("-i", "--input-directory",  help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
     parser.add_argument("-o", "--output-directory", default=os.path.join(os.getcwd(), "ampwrap_long"), help="Specify the output directory (default: ./ampwrap_long_results)")
-    parser.add_argument("-tr", "--trimming", choices=["porechop", "porechop_abi"], default=None, required=False, help="Specify the method if you want to remove adapters")
-    parser.add_argument("-d", "--db-choice", choices=["rdp", "silva","emu"], default="emu", required=False, help="Specify the database choice for taxonomy assignment for EMU: silva, rdp or emu_db (default: emu)")
+    parser.add_argument("-tr", "--trimming", choices=["porechop", "porechop_abi"], default=None, required=False,
+					help="Specify the method to remove adapters, skip if unspecified")
+    parser.add_argument("-d", "--db-choice", choices=["rdp", "silva","emu"], default="emu", required=False,
+					help="Specify the database choice for taxonomy assignment for EMU: silva, rdp or emu_db (default: emu)")
     parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
     parser.add_argument("-t", "--threads", default=os.cpu_count(), help="Number of threads")
     parser.add_argument("--nl-min-len",help="Filter amplicons on a minimum read length. Default=1200", type=int, default=1200)
     parser.add_argument("--nl-max-len",help="Filter amplicons on a maximum read length. Default=1800", type=int, default=1800)
     parser.add_argument("--nl-min-qual",help="Filter on a minimum average read quality score. Default=10", type=int, default=10)
     parser.add_argument("--emu-min-ab",help="Filter species with relative abundance below threshold; .01 = 1 percent. Default=0.0001", type=float, default=0.0001)
-    parser.add_argument("--cutadapt-forward",help="Forward primer sequence to trim it with cutadapt")
-    parser.add_argument("--cutadapt-reverse",help="Reverse primer sequence to trim it with cutadapt")
-    #parser.add_argument("--cutadapt-disable-discard-untrimmed",help="Deactivate cutadapt option --discard-untrimmed",actions="store_true",default=False)
+    parser.add_argument("--cutadapt-forward",help="Forward primer sequence to trim it with cutadapt, no trimming if unspecified")
+    parser.add_argument("--cutadapt-reverse",help="Reverse primer sequence to trim it with cutadapt, no trimming if unspecified")
     parser.add_argument("--db-info",action="store_true", help="Print available databases with version and checksum info")
-    parser.add_argument("-c", "--chimera", action="store_true", help="Specify chimera flag if you want to remove chimeras")
+    parser.add_argument("-c", "--chimera", action="store_true", help="Specify chimera flag to remove chimeras, skip if unspecified")
+    parser.add_argument("-kc", "--keep-counts", action="store_true", help="Include estimated read counts in EMU output")
     try: args = parser.parse_args()
     except SystemExit:
-        #parser.print_usage()
+        parser.print_usage()
         sys.exit(0)
 
     if args.db_info:
         print_db_info()
         sys.exit(0)
+
+    if not args.input_directory:
+        parser.print_usage()
+        print("\nError: -i is required unless --db-info is used.")
+        sys.exit(1)
+
+
+
+
+    if len(sys.argv) == 1:
+        parser.print_usage()
+        sys.exit(0)
+
 
     input_dir = args.input_directory
     output_dir = args.output_directory
@@ -161,8 +173,7 @@ def main():
     is_quiet = args.quiet
     reverse_primer = args.cutadapt_reverse
     forward_primer = args.cutadapt_forward
-    #disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
-
+    keep_counts = args.keep_counts
 
 
     # Create output directory if it doesn't exist
@@ -203,7 +214,8 @@ def main():
 
 
     config_path = write_config_yaml(
-        input_dir, output_dir,  args.db_choice, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, emu_min_ab, reverse_primer, forward_primer, args.chimera
+        input_dir, output_dir,  args.db_choice, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, 
+        emu_min_ab, reverse_primer, forward_primer, args.chimera , keep_counts
     )
     run_snakemake(config_path)
 

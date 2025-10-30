@@ -20,6 +20,7 @@ To see workflow-specific help:
     
     workflow = sys.argv[1]
     executables = {
+        'test': 'AmpWrap_short.ema',
         'short': 'AmpWrap_short',
         'long': 'AmpWrap_long'
     }
