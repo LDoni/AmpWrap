@@ -134,7 +134,7 @@ S1_r1.fq.gz
 S1_r2.fq.gz
 ```
 
-### AmpWrap for Short Reads (Illumina)
+## AmpWrap for Short Reads (Illumina)
 To process short-read 16S rRNA gene data from Illumina sequencing:
 ##  Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
@@ -196,7 +196,7 @@ If the test goes smoothly you are ready to analyze your data
 | DADA2 18S Silva V132 | DADA2    | 2024-01        | DADA2_silva_v132_18S.fa                  | 3bbab8029675474805d1a5d24cf23bb9 | [Download](https://zenodo.org/records/10444891/files/DADA2_silva_v132_18S.fa?download=1)                       |
 
 
-### AmpWrap for Long Reads (Nanopore)
+## AmpWrap for Long Reads (Nanopore)
 For long-read 16S rRNA gene data from Nanopore sequencing, use:
 ## Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
