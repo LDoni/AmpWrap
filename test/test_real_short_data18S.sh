@@ -1,4 +1,4 @@
-mkdir -p real_short_data_test
+mkdir -p real_short_data_test18S
 
 wget --no-check-certificate 'https://drive.usercontent.google.com/download?export=download&id=1V4cbazPlErBfjCSiDJsaiIFS1uG4hD5U&confirm=t' -O real_short_data_test18S/PM0224_R1.fastq.gz
 wget --no-check-certificate 'https://drive.usercontent.google.com/download?export=download&id=1n1BdtR390xxvTQVHIdgTEOv9s4C0iV4J&confirm=t' -O real_short_data_test18S/PM0224_R2.fastq.gz
