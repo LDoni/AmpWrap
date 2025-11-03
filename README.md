@@ -23,6 +23,10 @@
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![R](https://img.shields.io/badge/r-%23276DC3.svg?style=for-the-badge&logo=r&logoColor=white) ![Bash](https://img.shields.io/badge/bash-%234EAA25.svg?style=for-the-badge&logo=gnu-bash&logoColor=white) ![Snakemake](https://img.shields.io/badge/Snakemake-svg?style=for-the-badge&logo=c&logoColor=white) 
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17513793.svg)](https://doi.org/10.5281/zenodo.17513793)
+
+
+
 ## Table of Contents
 - [Introduction](#introduction)
 - [Installation](#installation)
