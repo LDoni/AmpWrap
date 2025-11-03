@@ -571,7 +571,7 @@ rule download_dada2_db:
         elif [ "{params.method}" == "dada2_18S_silva132" ]; then
             DB_URL="https://zenodo.org/records/10444891/files/DADA2_silva_v132_18S.fa?download=1"
             DB_MD5="3bbab8029675474805d1a5d24cf23bb9"
-            DB_FILENAME="GTDB_bac120_arc122_ssu_r202_Genus.fa.gz"
+            DB_FILENAME="DADA2_silva_v132_18S.fa"
         elif [ "{params.method}" == "dada2_pr2_5.1.1" ]; then
             DB_URL="https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz"
             DB_MD5="cab726022035241ce1f05a24dd3ef707"
