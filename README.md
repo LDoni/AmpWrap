@@ -100,12 +100,23 @@ Install AmpWrap
 conda activate ampwrap
 bash setup.sh
 ```
+or 
+## Install with docker
+```sh
+git clone https://github.com/LDoni/AmpWrap.git
+cd AmpWrap
+docker build -t ampwrap:latest .
+```
 
 
 ## General Usage
 ```sh
 ampwrap --help
 ```
+
+
+
+
 
 ## Supported input formats
 
