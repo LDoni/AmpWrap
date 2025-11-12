@@ -106,6 +106,7 @@ or
 git clone https://github.com/LDoni/AmpWrap.git
 cd AmpWrap
 docker build -t ampwrap:latest .
+conda activate ampwrap
 ```
 
 
