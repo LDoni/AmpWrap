@@ -42,8 +42,7 @@ SCRIPTS_DIR = os.path.join(CONDA_BIN, 'scripts') if os.path.exists(os.path.join(
 
 SCRIPT_PATHS = {
     'figaro': os.path.join(SCRIPTS_DIR, 'figaro/figaro/figaro.py'),
-    #'dada2_filter': os.path.join(SCRIPTS_DIR, 'dada2_filter.R'),
-    'dada2_filter': os.path.join(SCRIPTS_DIR, 'dada2_filter2.R'),
+    'dada2_filter': os.path.join(SCRIPTS_DIR, 'dada2_filter.R'),
     'dada2_learn_errors': os.path.join(SCRIPTS_DIR, 'dada2_learn_errors.R'),
     'dada2_infer_asvs': os.path.join(SCRIPTS_DIR, 'dada2_infer_asvs.R'),
     'dada2_remove_chimeras': os.path.join(SCRIPTS_DIR, 'dada2_remove_chimeras.R'),
