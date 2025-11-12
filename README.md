@@ -103,10 +103,8 @@ bash setup.sh
 or 
 ## Install with docker
 ```sh
-git clone https://github.com/LDoni/AmpWrap.git
-cd AmpWrap
-docker build -t ampwrap:latest .
-conda activate ampwrap
+docker pull ghcr.io/ldoni/ampwrap:v1.1.1
+docker run --rm ghcr.io/ldoni/ampwrap:v1.1.1 --help
 ```
 
 
