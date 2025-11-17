@@ -38,14 +38,18 @@ for run_dir in run_dirs:
     figaro_json = figaro_files[0]
 
     df1 = pd.read_table(cutadapt_log, delim_whitespace=True)
-    df2 = pd.read_table(dada2_file).loc[:,["sample","reads.in","nonchim","total_retained"]]
+    df2 = pd.read_table(dada2_file).loc[:,["sample","reads.in","reads.out","dadaF","dadaR","merged","nonchim","total_retained"]]
     df2["total_retained"] = df2["total_retained"].apply(lambda x: f"{x}%")
     df = pd.merge(df1, df2, on="sample", how="inner")
 
     new_columns = pd.MultiIndex.from_tuples([
         ("cutadapt", "reads_retained"),
         ("cutadapt", "bps_retained"),
-        ("dada2", "input"),
+        ("dada2", "reads.in"),
+        ("dada2", "reads.out"),
+        ("dada2", "dadaF"),
+        ("dada2", "dadaR"),
+        ("dada2", "merged"),
         ("dada2", "nonchim"),
         ("dada2", "total_retained"),
     ])
