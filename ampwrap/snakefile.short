@@ -24,7 +24,7 @@ dada2_params = config["dada2_params"]
 param_source = config["dada2_source"]
 dry_run_tune = config.get("dry_run_tune", False)
 cutadapt_trim_by_length = config.get("cutadapt_trim_by_length", False)
-
+doFigaro = not config.get("dada2_params", False)
 
 run_dirs = config.get("run_dirs","")
 if run_dirs != "":
@@ -219,7 +219,7 @@ rule all:
 
             *[
                  f"{config['output_dir']}/{c['Run']}/intermediate/figaro/trimParameters.json"
-                 for c in combo
+                 for c in combo if doFigaro
             ],
 
             # Dada2
@@ -231,7 +231,7 @@ rule all:
             expand("{output_dir}/{run}/intermediate/dada_fwd.rds",output_dir=output_dir,run=runs),
             expand("{output_dir}/{run}/intermediate/dada_rev.rds",output_dir=output_dir,run=runs),            
 
-            f"{output_dir}/all_runs/merged_asv_table.rds" if is_multirun else [], # TODO
+            f"{output_dir}/all_runs/merged_asv_table.rds" if is_multirun else [], 
             f"{output_dir}/all_runs/no_chimera_asvs.rds" if is_multirun else expand("{output_dir}/{run}/intermediate/no_chimera_asvs.rds",output_dir=output_dir,run=runs),
             f"{db_dir}/dada2/{out_name}",
             f"{output_dir}/results/ASVs.fa",
