@@ -713,6 +713,8 @@ rule reporter:
         version = version,
         taxonomy_method = assign_taxonomy_method,
         reporter=SCRIPT_PATHS['reporter'],
-        dada2_params = dada2_params
+        dada2_params = dada2_params,
+        use_figaro = USE_FIGARO,
+        output_dir = output_dir    
     script:
         SCRIPT_PATHS['reporter']
