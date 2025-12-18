@@ -20,11 +20,11 @@ figaroname = "fvieira"
 discard_untrimmed = "--discard-untrimmed"
 disable_discard_untrimmed = config["disable_discard_untrimmed"]
 if disable_discard_untrimmed: discard_untrimmed = ""
-dada2_params = config["dada2_params"]
+dada2_params = config["C"]
 param_source = config["dada2_source"]
 dry_run_tune = config.get("dry_run_tune", False)
 cutadapt_trim_by_length = config.get("cutadapt_trim_by_length", False)
-doFigaro = not config.get("dada2_params", False)
+USE_FIGARO = (config.get("dada2_source", "figaro") == "figaro")
 
 run_dirs = config.get("run_dirs","")
 if run_dirs != "":
@@ -172,6 +172,13 @@ def trackReadsDict(wildcards,runs=runs):
          }
     return(d)
 
+def figaro_input(wc):
+    return [f"{output_dir}/{wc.run}/intermediate/figaro/trimParameters.json"] if USE_FIGARO else []
+
+def figaro_arg(wc):
+    return f"{output_dir}/{wc.run}/intermediate/figaro/trimParameters.json" if USE_FIGARO else "NONE"
+
+
 
 rule all:
     input:
@@ -219,7 +226,7 @@ rule all:
 
             *[
                  f"{config['output_dir']}/{c['Run']}/intermediate/figaro/trimParameters.json"
-                 for c in combo if doFigaro
+                 for c in combo if USE_FIGARO
             ],
 
             # Dada2
@@ -434,24 +441,24 @@ rule figaro:
 
                 print(f"{repr(trim_pos)} | {repr(max_err)} | {read_ret} | {score}")
 
-
 rule dada2_filter:
     input:
-        figaro_params="{output_dir}/{run}/intermediate/figaro/trimParameters.json",
-        multiQC_out="{output_dir}/{run}/QC/raw_qc_post_cutadapt/multiqc_report.html"
+        figaro_params = figaro_input,
+        multiQC_out   = "{output_dir}/{run}/QC/raw_qc_post_cutadapt/multiqc_report.html"
     output:
         checkout="{output_dir}/{run}/intermediate/dada2_filtered/checkout.filter",
         filter_summary="{output_dir}/{run}/intermediate/dada2_filtered/filter_summary.tsv",
     params:
         filter_script = SCRIPT_PATHS['dada2_filter'],
-#        dada2_params = config.get("dada2_params")
-        dada2_params=f'"{config.get("dada2_params")}"'
+        dada2_params  = config.get("dada2_params",""),
+        figaro_arg    = figaro_arg
     shell:
-        """
+        r"""
         mkdir -p {output_dir}/{wildcards.run}/intermediate/dada2_filtered
         Rscript {params.filter_script} \
-        {output_dir}/{wildcards.run}/intermediate/cutadapt {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
-        {input.figaro_params} {params.dada2_params}
+          {output_dir}/{wildcards.run}/intermediate/cutadapt \
+          {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
+          {params.figaro_arg} "{params.dada2_params}"
         touch {output.checkout}
         """
 
