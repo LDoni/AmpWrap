@@ -8,31 +8,37 @@ options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 suppressPackageStartupMessages(library(jsonlite))
 
-# Read Figaro Params
-figaro <- fromJSON(figaro_params)
+truncLen <- NULL
+maxEE <- NULL
 
-truncLen <- as.numeric(unlist(figaro$trimPosition[[1]]))
-maxEE <- as.numeric(unlist(figaro$maxExpectedError[[1]]))
+# 1) Read Figaro params only if a real file path is given
+if (!is.null(figaro_params) && figaro_params != "" && figaro_params != "NONE" && file.exists(figaro_params)) {
+  figaro <- fromJSON(figaro_params)
+  truncLen <- as.numeric(unlist(figaro$trimPosition[[1]]))
+  maxEE <- as.numeric(unlist(figaro$maxExpectedError[[1]]))
+}
+
+# 2) Override from user params (if provided)
+if (!is.null(user_params) && user_params != "" && user_params != "None" && user_params != "NA") {
+  user_params_list <- strsplit(user_params, ";", fixed = TRUE)[[1]]
+  for (p in user_params_list) {
+    keyval <- strsplit(p, "=", fixed = TRUE)[[1]]
+    if (length(keyval) == 2) {
+      key <- trimws(keyval[1])
+      val <- eval(parse(text = keyval[2]))
+      if (key == "truncLen") truncLen <- val
+      if (key == "maxEE") maxEE <- val
+    }
+  }
+}
+
+# 3) Stop if still missing
+if (is.null(truncLen) || is.null(maxEE)) {
+  stop("No valid truncLen/maxEE found. Provide Figaro JSON or pass --dada2_params like 'truncLen=c(240,200);maxEE=c(2,2)'.")
+}
 
 truncLen <- as.vector(truncLen)
 maxEE <- as.vector(maxEE)
-
-
-# Override user params if provided
-if (!is.na(user_params)) {
-    user_params_list <- strsplit(user_params, ";")[[1]]
-    for (p in user_params_list) {
-        keyval <- strsplit(p, "=")[[1]]
-        if (length(keyval) == 2) {
-            key <- trimws(keyval[1])
-            val <- eval(parse(text = keyval[2]))
-            #key <- keyval[1]
-            #val <- as.numeric(keyval[2])
-            if (key == "truncLen") truncLen <- val
-            if (key == "maxEE") maxEE <- val
-        }
-    }
-}
 
 # File list
 fwd <- list.files(input_dir, pattern = "_trimmed_R1.fq.gz", full.names = TRUE)
