@@ -4,6 +4,14 @@ import json
 import datetime
 import os
 import glob
+import sys
+
+if getattr(snakemake, "log", None):
+    log_path = str(snakemake.log[0])
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    log_handle = open(log_path, "w")
+    sys.stdout = log_handle
+    sys.stderr = log_handle
 
 output_dir = snakemake.params.output_dir if "output_dir" in snakemake.params else os.path.dirname(snakemake.output.report)
 

@@ -45,7 +45,7 @@ def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names,
         "output_dir": output_dir,
         "tax_db": db_choice,
         "script": "script",
-        "logs": "logs",
+        "logs": os.path.join(output_dir, "logs"),
         "file_extension": extension,
         "sample_names": sample_names,
         "threads": threads,
@@ -86,6 +86,7 @@ def run_snakemake(config_path, is_quiet=False):
         "--configfile", config_path,
         "--cores", "all",
         "--nolock",
+        "--show-failed-logs",
         "--snakefile", snakefile_path
     ]
 

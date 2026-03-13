@@ -5,6 +5,7 @@ from datetime import datetime
 latency_wait = 20
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
+logs_dir = config.get("logs", os.path.join(output_dir, "logs"))
 sample_names = config["sample_names"]
 print(sample_names)
 file_extension = config["file_extension"]
@@ -106,10 +107,13 @@ rule seqkit_stats_pre_qc:
                file_extension=file_extension)
     output:
         "{output_dir}/QC/raw_qc_initial/readcount/raw_reads_counts.txt"
+    log:
+        f"{logs_dir}/seqkit_stats_pre_qc/seqkit_stats_pre_qc.log"
     shell:
         """
         mkdir -p $(dirname {output})
-        seqkit stats -T -j {threads} {input_dir}/*.{file_extension} > {output}
+        mkdir -p $(dirname {log})
+        seqkit stats -T -j {threads} {input_dir}/*.{file_extension} > {output} 2> {log}
         """
 
 rule fastqc_initial:
@@ -117,18 +121,23 @@ rule fastqc_initial:
         f"{input_dir}/{{sample}}.{file_extension}"
     output:
         "{output_dir}/QC/raw_qc_initial/{sample}_fastqc.html"
+    log:
+        f"{logs_dir}/fastqc_initial/{{sample}}.log"
     shell:
         """
         mkdir -p {output_dir}/QC/raw_qc_initial
-        fastqc {input} -o $(dirname {output})  > /dev/null 2>&1
+        mkdir -p $(dirname {log})
+        fastqc {input} -o $(dirname {output}) > {log} 2>&1
         """
 
 rule multiqc_initial:
     input: expand("{output_dir}/QC/raw_qc_initial/{sample}_fastqc.html",output_dir=output_dir,sample=sample_names)
     output: f"{output_dir}/QC/raw_qc_initial/multiqc_report.html"
+    log: f"{logs_dir}/multiqc_initial/multiqc_initial.log"
     shell:
         """
-        multiqc $(dirname {output}) -o $(dirname {output}) > /dev/null 2>&1
+        mkdir -p $(dirname {log})
+        multiqc $(dirname {output}) -o $(dirname {output}) > {log} 2>&1
         """
 
 rule porechop:
@@ -136,6 +145,8 @@ rule porechop:
         f"{input_dir}/{{sample}}.{file_extension}"
     output:
         fq="{output_dir}/intermediate/porechop/{sample}-porechop.fastq.gz"
+    log:
+        f"{logs_dir}/porechop/{{sample}}.log"
     run:
         if trimming_method == "porechop_abi":
             cmd = f"porechop_abi -abi -i {input} -o {output.fq}"
@@ -146,7 +157,8 @@ rule porechop:
 
         shell(f"""
             mkdir -p {output_dir}/intermediate/porechop
-            {cmd} > /dev/null 2>&1
+            mkdir -p $(dirname {{log}})
+            {cmd} > {{log}} 2>&1
         """)
 
 
@@ -164,22 +176,25 @@ rule cutadapt_primers:
     shell:
       """
       mkdir -p {output_dir}/intermediate/cutadapt
-      cutadapt -e 0.2 -O 15 --revcomp -o {output.r1_trimmed} -a {params.forward_primer}...{params.RC_RVS} {input.fq} > {log}
+      cutadapt -e 0.2 -O 15 --revcomp -o {output.r1_trimmed} -a {params.forward_primer}...{params.RC_RVS} {input.fq} > {log} 2>&1
       """
 
 
 rule combine_cutadapt_logs:
     input: expand("{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log", output_dir=output_dir, sample=sample_names)
     output: f"{output_dir}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt"
-    log: f"{output_dir}/intermediate/cutadapt/combined_cutadapt.log"
+    log: f"{logs_dir}/combine_cutadapt_logs/combined_cutadapt.log"
     shell:
          f"""
-        cat {{input}} > {{output}}
-        echo -e "sample\treads retained\tbps retained" > {{log}}
-        paste <(echo {" ".join(list(sample_names))} | tr " " "\n") <(grep "passing" {{output}} | cut -f3 -d "(" | tr -d ")") <(grep "filtered" {{output}} | cut -f3 -d "(" | tr -d ")") >> {{log}}
-        cat {{log}}
-        mkdir -p "{output_dir}/QC/raw_qc_post/"
-        mv {{input}} "{output_dir}/QC/raw_qc_post/"
+        mkdir -p $(dirname {{log}})
+        (
+            cat {{input}} > {{output}}
+            echo -e "sample\treads retained\tbps retained" > "{output_dir}/intermediate/cutadapt/combined_cutadapt.log"
+            paste <(echo {" ".join(list(sample_names))} | tr " " "\n") <(grep "passing" {{output}} | cut -f3 -d "(" | tr -d ")") <(grep "filtered" {{output}} | cut -f3 -d "(" | tr -d ")") >> "{output_dir}/intermediate/cutadapt/combined_cutadapt.log"
+            cat "{output_dir}/intermediate/cutadapt/combined_cutadapt.log"
+            mkdir -p "{output_dir}/QC/raw_qc_post/"
+            mv {{input}} "{output_dir}/QC/raw_qc_post/"
+        ) > {{log}} 2>&1
           """
 
 rule nanofilt:
@@ -187,13 +202,16 @@ rule nanofilt:
         unpack(getNanoFiltInput)
     output:
         fq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
+    log:
+        f"{logs_dir}/nanofilt/{{sample}}.log"
     shell:
         f"""
         mkdir -p {{output_dir}}/intermediate/nanofilt
+        mkdir -p $(dirname {{log}})
         if [[ "{{input.fq}}" == *.gz ]]; then
-            zcat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {{output.fq}}
+            zcat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {{output.fq}} 2> {{log}}
         else
-            cat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {{output.fq}}
+            cat {{input.fq}} | NanoFilt -l {nl_min_len} --maxlength {nl_max_len} -q {nl_min_qual} > {{output.fq}} 2> {{log}}
         fi
         """
 
@@ -202,18 +220,23 @@ rule fastqc_post:
         trimmed_files = "{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
     output:
         fastqc = "{output_dir}/QC/raw_qc_post/{sample}-nanofilt_fastqc.html"
+    log:
+        f"{logs_dir}/fastqc_post/{{sample}}.log"
     shell:
         """
         mkdir -p $(dirname {output})
-        fastqc {input.trimmed_files} -o $(dirname {output})  > /dev/null 2>&1
+        mkdir -p $(dirname {log})
+        fastqc {input.trimmed_files} -o $(dirname {output}) > {log} 2>&1
         """
 
 rule multiqc_post:
     input: expand("{output_dir}/QC/raw_qc_post/{sample}-nanofilt_fastqc.html",output_dir=output_dir,sample=sample_names)
     output: "{output_dir}/QC/raw_qc_post/multiqc_report.html"
+    log: f"{logs_dir}/multiqc_post/multiqc_post.log"
     shell:
         """
-        multiqc $(dirname {output}) -o $(dirname {output})  > /dev/null 2>&1
+        mkdir -p $(dirname {log})
+        multiqc $(dirname {output}) -o $(dirname {output}) > {log} 2>&1
         """
 
 rule chimera_scrub:
@@ -226,10 +249,13 @@ rule chimera_scrub:
     params:
         paf="{output_dir}/intermediate/nanofilt/{sample}.paf",
         yacrd="{output_dir}/intermediate/nanofilt/{sample}.yacrd"
+    log:
+        f"{logs_dir}/chimera_scrub/{{sample}}.log"
     shell:
         """
-        minimap2 -x ava-ont -g 500 -t {threads} {input.fq} {input.fq} > {params.paf}
-        yacrd -i {params.paf} -o {params.yacrd} -c 4 -n 0.4 scrubb -i {input.fq} -o {output.fq}
+        mkdir -p $(dirname {log})
+        minimap2 -x ava-ont -g 500 -t {threads} {input.fq} {input.fq} > {params.paf} 2> {log}
+        yacrd -i {params.paf} -o {params.yacrd} -c 4 -n 0.4 scrubb -i {input.fq} -o {output.fq} >> {log} 2>&1
         rm {params.paf}
         """
 
@@ -241,10 +267,13 @@ rule seqkit_stats_post_qc:
                suffix=suffix)
     output:
         "{output_dir}/QC/raw_qc_post/readcount/filtered_reads_counts.txt"
+    log:
+        f"{logs_dir}/seqkit_stats_post_qc/seqkit_stats_post_qc.log"
     shell:
         """
         mkdir -p $(dirname {output})
-        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-{suffix}.fastq > {output}
+        mkdir -p $(dirname {log})
+        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-{suffix}.fastq > {output} 2> {log}
         """
 
 
@@ -290,34 +319,50 @@ rule emu_database:
             "silva": "4195810ceec63ed13b9ee3f9c678c52b",
             "pr2": "51e1c9eb383e8770d1ccdf805b35444f"
         }
+    log:
+        f"{logs_dir}/emu_database/{tax_db}.log"
     run:
         import os
         import subprocess
         os.makedirs(output.the_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(str(log)), exist_ok=True)
 
-        if tax_db == "pr2":
-            db_zip = f"{db_dir}/pr2_version_5.1.1_emu.zip"
-            db_url = "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_emu.zip"
+        with open(str(log), "w") as log_handle:
+            if tax_db == "pr2":
+                db_zip = f"{db_dir}/pr2_version_5.1.1_emu.zip"
+                db_url = "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_emu.zip"
 
-            shell(f"wget -O {db_zip} {db_url}")
-            # md5 check
-            expected_md5 = params.md5_dict["pr2"]
-            result = subprocess.run(f"echo '{expected_md5}  {db_zip}' | md5sum -c -", shell=True)
-            if result.returncode != 0:
-                raise ValueError(f"ERROR: MD5 checksum failed for {db_zip}")
-            # unzip
-            shell(f"unzip -o {db_zip} -d {output.the_dir}")
+                subprocess.run(["wget", "-O", db_zip, db_url], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+                expected_md5 = params.md5_dict["pr2"]
+                result = subprocess.run(
+                    f"echo '{expected_md5}  {db_zip}' | md5sum -c -",
+                    shell=True,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                )
+                if result.returncode != 0:
+                    raise ValueError(f"ERROR: MD5 checksum failed for {db_zip}")
+                subprocess.run(["unzip", "-o", db_zip, "-d", output.the_dir], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
 
-        else:
-            db_tar = f"{db_dir}/{tax_db}.tar"
-            shell(f"osf -p 56uf7 fetch osfstorage/emu-prebuilt/{tax_db}.tar {db_tar}")
-            # md5 check
-            expected_md5 = params.md5_dict[tax_db]
-            result = subprocess.run(f"echo '{expected_md5}  {db_tar}' | md5sum -c -", shell=True)
-            if result.returncode != 0:
-                raise ValueError(f"ERROR: MD5 checksum failed for {db_tar}")
+            else:
+                db_tar = f"{db_dir}/{tax_db}.tar"
+                subprocess.run(
+                    ["osf", "-p", "56uf7", "fetch", f"osfstorage/emu-prebuilt/{tax_db}.tar", db_tar],
+                    check=True,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                )
+                expected_md5 = params.md5_dict[tax_db]
+                result = subprocess.run(
+                    f"echo '{expected_md5}  {db_tar}' | md5sum -c -",
+                    shell=True,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                )
+                if result.returncode != 0:
+                    raise ValueError(f"ERROR: MD5 checksum failed for {db_tar}")
 
-            shell(f"tar -xvf {db_tar} -C {output.the_dir} > /dev/null 2>&1")
+                subprocess.run(["tar", "-xvf", db_tar, "-C", output.the_dir], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
 
 
 rule emu_abundance:
@@ -325,6 +370,8 @@ rule emu_abundance:
         unpack(getEmuInput)
     output:
         "{output_dir}/results/emu/{sample}-{suffix}_rel-abundance.tsv",
+    log:
+        f"{logs_dir}/emu_abundance/{{sample}}.log"
     params:
         type='map-ont',
         min_ab=emu_min_ab,
@@ -335,8 +382,9 @@ rule emu_abundance:
     shell:
         """
         mkdir -p {output_dir}/results/emu
-        echo emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts}
-        emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts}
+        mkdir -p $(dirname {log})
+        echo emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts} > {log}
+        emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts} >> {log} 2>&1
         """
 
 rule emu_phyloseq:
@@ -346,6 +394,8 @@ rule emu_phyloseq:
     output:
         "{output_dir}/results/emu/emu_phyloseq.rds",
         "{output_dir}/results/emu/emu_abundance.biom"
+    log:
+        f"{logs_dir}/emu_phyloseq/emu_phyloseq.log"
     params:
         emu_dir=lambda wildcards: f"{output_dir}/results/emu"
     script:
@@ -364,6 +414,8 @@ rule reporter:
         **({ "cutadapt": f"{config['output_dir']}/intermediate/cutadapt/combined_cutadapt.log" } if to_cutadapt else {})
     output:
         report = f"{config['output_dir']}/results/final_report.txt"
+    log:
+        f"{logs_dir}/reporter/final_report.log"
     params:
         config.get("trimming_method"),
         nl_min_qual = config["nl_min_qual"],

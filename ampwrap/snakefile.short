@@ -8,6 +8,7 @@ version = "1.1.1"
 start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
+logs_dir = config.get("logs", os.path.join(output_dir, "logs"))
 sample_tab = config["sample_tab"]
 file_extension = config["file_extension"]
 db_dir = config.get("db_dir","db_s")
@@ -250,15 +251,25 @@ rule all:
 rule input_symlink:
     input: lambda wildcards: renamed_samples2files[wildcards.sample][wildcards.index]
     output: f"{output_dir}/{{run}}/figaro_inp/{{sample}}_R{{index,[^\._]+}}.{file_extension}"
+    log: f"{logs_dir}/input_symlink/{{run}}/{{sample}}_R{{index}}.log"
     run:
         import os
+        log_path = str(log)
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
         target_dir = os.path.dirname(str(output))
-        print(target_dir)
-        os.makedirs(target_dir,exist_ok=True)
-        src,target = os.path.abspath(str(input)),os.path.abspath(str(output))
-        print(src,target)
-        try: os.symlink(src, target)
-        except Exception as E: print(E); raise Error
+        os.makedirs(target_dir, exist_ok=True)
+        src, target = os.path.abspath(str(input)), os.path.abspath(str(output))
+
+        with open(log_path, "w") as log_handle:
+            log_handle.write(f"Creating symlink for {wildcards.sample} R{wildcards.index}\n")
+            log_handle.write(f"source={src}\n")
+            log_handle.write(f"target={target}\n")
+            try:
+                os.symlink(src, target)
+                log_handle.write("Symlink created successfully.\n")
+            except Exception as exc:
+                log_handle.write(f"Symlink creation failed: {exc}\n")
+                raise
 
 rule cutadapt:
      input:
@@ -282,11 +293,11 @@ rule cutadapt:
          if [ "{params.cutadapt_trim_by_length}" = "True" ]; then
          cutadapt -u "{params.forward_primer_length}" -U "{params.reverse_primer_length}" \
                   -o {output.r1_trimmed} -p {output.r2_trimmed} \
-                  {input.r1} {input.r2} > {log}
+                  {input.r1} {input.r2} > {log} 2>&1
          else
          cutadapt -g "^{params.forward_primer}" -G "^{params.reverse_primer}" {discard_untrimmed} \
                   -o {output.r1_trimmed} -p {output.r2_trimmed} \
-                  {input.r1} {input.r2} > {log}
+                  {input.r1} {input.r2} > {log} 2>&1
          fi
          """
 
@@ -294,11 +305,14 @@ rule fastqc_initial:
      input: f"{output_dir}/{{run}}/figaro_inp/{{sample}}_R{{index}}.{file_extension}"
      output:
          f"{output_dir}/{{run}}/QC/raw_qc_initial/{{sample}}_R{{index,[^\._]}}_fastqc.html"
+     log:
+         f"{logs_dir}/fastqc_initial/{{run}}/{{sample}}_R{{index}}.log"
      threads: threads
      shell:
          """
          mkdir -p {output_dir}/{wildcards.run}/QC/raw_qc_initial
-         fastqc {input} -o $(dirname {output}) -t {threads} > /dev/null 2>&1
+         mkdir -p $(dirname {log})
+         fastqc {input} -o $(dirname {output}) -t {threads} > {log} 2>&1
          """
 
 
@@ -311,10 +325,12 @@ rule multiqc_initial:
             if c['Run'] == wildcards.run
         ]
     output: f"{output_dir}/{{run}}/QC/raw_qc_initial/multiqc_report.html"
+    log: f"{logs_dir}/multiqc_initial/{{run}}.log"
     threads: threads
     shell:
         """
-        multiqc $(dirname {output}) -o $(dirname {output}) --force > /dev/null 2>&1
+        mkdir -p $(dirname {log})
+        multiqc $(dirname {output}) -o $(dirname {output}) --force > {log} 2>&1
         """
 
 rule combine_cutadapt_logs:
@@ -326,23 +342,28 @@ rule combine_cutadapt_logs:
     output:
         summary = f"{output_dir}/{{run}}/intermediate/cutadapt/cutadapt_summary.log",
         merged  = f"{output_dir}/{{run}}/intermediate/cutadapt/cutadapt_primer_trimming_stats.txt",
+    log:
+        f"{logs_dir}/combine_cutadapt_logs/{{run}}.log"
     run:
         shell(f"""
-            cat {{input}} > {{output.merged}}
+            mkdir -p $(dirname {{log}})
+            (
+                cat {{input}} > {{output.merged}}
 
-            echo -e "sample reads_retained bps_retained" > {{output.summary}}
+                echo -e "sample reads_retained bps_retained" > {{output.summary}}
 
-            for f in {{input}}; do
-                sample=$(basename $f | cut -d'_' -f1)
-                reads=$(grep "Pairs written (passing filters):" $f | awk '{{{{gsub(/\\(|\\)/,"",$6); print $6}}}}')
-                bps=$(grep "Total written (filtered):" $f | awk '{{{{gsub(/\\(|\\)/,"",$6); print $6}}}}')
-                echo -e "$sample\t$reads\t$bps" >> {{output.summary}}
-            done
+                for f in {{input}}; do
+                    sample=$(basename $f | cut -d'_' -f1)
+                    reads=$(grep "Pairs written (passing filters):" $f | awk '{{{{gsub(/\\(|\\)/,"",$6); print $6}}}}')
+                    bps=$(grep "Total written (filtered):" $f | awk '{{{{gsub(/\\(|\\)/,"",$6); print $6}}}}')
+                    echo -e "$sample\t$reads\t$bps" >> {{output.summary}}
+                done
 
-            cat {{output.summary}}
+                cat {{output.summary}}
 
-            mkdir -p {{output_dir}}/{{wildcards.run}}/QC/raw_qc_post_cutadapt/
-            cp {{input}} {{output_dir}}/{{wildcards.run}}/QC/raw_qc_post_cutadapt/
+                mkdir -p {{output_dir}}/{{wildcards.run}}/QC/raw_qc_post_cutadapt/
+                cp {{input}} {{output_dir}}/{{wildcards.run}}/QC/raw_qc_post_cutadapt/
+            ) > {{log}} 2>&1
         """)
 
 
@@ -350,11 +371,13 @@ rule combine_cutadapt_logs:
 rule fastqc_post_cutadapt:
     input: f"{output_dir}/{{run}}/intermediate/cutadapt/{{sample}}_trimmed_R{{index}}.fq.gz"
     output: f"{output_dir}/{{run}}/QC/raw_qc_post_cutadapt/{{sample}}_trimmed_R{{index,[^\._]}}_fastqc.html"
+    log: f"{logs_dir}/fastqc_post_cutadapt/{{run}}/{{sample}}_R{{index}}.log"
     threads: 15
     shell:
         """
         mkdir -p $(dirname {output})
-        fastqc {input} -o $(dirname {output}) -t {threads}  > /dev/null 2>&1
+        mkdir -p $(dirname {log})
+        fastqc {input} -o $(dirname {output}) -t {threads} > {log} 2>&1
         """
 
 
@@ -367,10 +390,12 @@ rule multiqc_final:
             if c['Run'] == wildcards.run
         ]
     output: f"{output_dir}/{{run}}/QC/raw_qc_post_cutadapt/multiqc_report.html"
+    log: f"{logs_dir}/multiqc_final/{{run}}.log"
     threads: threads
     shell:
         """
-        multiqc $(dirname {output}) -o $(dirname {output}) --force > /dev/null 2>&1
+        mkdir -p $(dirname {log})
+        multiqc $(dirname {output}) -o $(dirname {output}) --force > {log} 2>&1
         """
 
 rule figaro:
@@ -380,6 +405,8 @@ rule figaro:
                for idx in indices]
     output:
         trimParameters = f"{output_dir}/{{run}}/intermediate/figaro/trimParameters.json"
+    log:
+        f"{logs_dir}/figaro/{{run}}.log"
     params:
         amplen = amplicon_length,
         forward_primer_length = forward_primer_length,
@@ -394,17 +421,18 @@ rule figaro:
         import sys
 
         os.makedirs(f"{output_dir}/{wildcards.run}/intermediate/figaro", exist_ok=True)
+        os.makedirs(os.path.dirname(str(log)), exist_ok=True)
 
-        subprocess.run([
-            "python", params.figaro_script,
-            "-i", params.input_dir,
-            "-o", f"{output_dir}/{wildcards.run}/intermediate/figaro",
-            "-a", str(params.amplen),
-            "-f", str(params.forward_primer_length),
-            "-r", str(params.reverse_primer_length),
-            "-F", params.figaroname
-        ], check=True,stdout=subprocess.DEVNULL,
-           stderr=subprocess.DEVNULL)
+        with open(str(log), "w") as log_handle:
+            subprocess.run([
+                "python", params.figaro_script,
+                "-i", params.input_dir,
+                "-o", f"{output_dir}/{wildcards.run}/intermediate/figaro",
+                "-a", str(params.amplen),
+                "-f", str(params.forward_primer_length),
+                "-r", str(params.reverse_primer_length),
+                "-F", params.figaroname
+            ], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
 
         if dry_run_tune:
             try:
@@ -448,6 +476,8 @@ rule dada2_filter:
     output:
         checkout="{output_dir}/{run}/intermediate/dada2_filtered/checkout.filter",
         filter_summary="{output_dir}/{run}/intermediate/dada2_filtered/filter_summary.tsv",
+    log:
+        f"{logs_dir}/dada2_filter/{{run}}.log"
     params:
         filter_script = SCRIPT_PATHS['dada2_filter'],
         dada2_params  = config.get("dada2_params",""),
@@ -455,10 +485,11 @@ rule dada2_filter:
     shell:
         r"""
         mkdir -p {output_dir}/{wildcards.run}/intermediate/dada2_filtered
+        mkdir -p $(dirname {log})
         Rscript {params.filter_script} \
           {output_dir}/{wildcards.run}/intermediate/cutadapt \
           {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
-          {params.figaro_arg} "{params.dada2_params}"
+          {params.figaro_arg} "{params.dada2_params}" > {log} 2>&1
         touch {output.checkout}
         """
 
@@ -467,13 +498,16 @@ rule dada2_error_learning:
         "{output_dir}/{run}/intermediate/dada2_filtered/checkout.filter"
     output:
         "{output_dir}/{run}/intermediate/dada2_error_learning/err_{direction}_reads.rds"
+    log:
+        f"{logs_dir}/dada2_error_learning/{{run}}_{{direction}}.log"
     params:
         learn_script = SCRIPT_PATHS['dada2_learn_errors']
     shell:
         """
         mkdir -p {output_dir}/{wildcards.run}/intermediate/dada2_error_learning
+        mkdir -p $(dirname {log})
         Rscript {params.learn_script} \
-        {output_dir}/{wildcards.run}/intermediate/dada2_filtered {output_dir}/{wildcards.run}/intermediate/dada2_error_learning
+        {output_dir}/{wildcards.run}/intermediate/dada2_filtered {output_dir}/{wildcards.run}/intermediate/dada2_error_learning > {log} 2>&1
         """
 
 rule dada2_infer_asvs:
@@ -484,11 +518,14 @@ rule dada2_infer_asvs:
         merged_asvs = "{output_dir}/{run}/intermediate/merged_asvs.rds",
         fwd="{output_dir}/{run}/intermediate/dada_fwd.rds",
         rev="{output_dir}/{run}/intermediate/dada_rev.rds"
+    log:
+        f"{logs_dir}/dada2_infer_asvs/{{run}}.log"
     params:
         infer_script = SCRIPT_PATHS['dada2_infer_asvs']
     shell:
         """
-        Rscript {params.infer_script} {output_dir}/{wildcards.run}/intermediate/dada2_filtered {input.err_fwd} {input.err_rev} {output.merged_asvs}
+        mkdir -p $(dirname {log})
+        Rscript {params.infer_script} {output_dir}/{wildcards.run}/intermediate/dada2_filtered {input.err_fwd} {input.err_rev} {output.merged_asvs} > {log} 2>&1
         """
 
 rule dada2_asv_table:
@@ -496,11 +533,14 @@ rule dada2_asv_table:
         merged_asvs = "{output_dir}/{run}/intermediate/merged_asvs.rds"
     output:
         asv_table = "{output_dir}/{run}/intermediate/asv_table.rds"
+    log:
+        f"{logs_dir}/dada2_asv_table/{{run}}.log"
     params:
         asv_table_script = SCRIPT_PATHS['dada2_asv_table']
     shell:
         """
-        Rscript {params.asv_table_script} {input.merged_asvs} {output.asv_table}
+        mkdir -p $(dirname {log})
+        Rscript {params.asv_table_script} {input.merged_asvs} {output.asv_table} > {log} 2>&1
         """
 
 rule dada2_merge_multiple_runs:
@@ -508,12 +548,15 @@ rule dada2_merge_multiple_runs:
         tables = lambda wildcards: mergeRuns(wildcards)
     output:
         merged_seqtab = "{output_dir}/all_runs/merged_asv_table.rds"
+    log:
+        f"{logs_dir}/dada2_merge_multiple_runs/all_runs.log"
     params:
         merge_script = SCRIPT_PATHS['dada2_merge_multiple_runs']
     shell:
         """
         mkdir -p {output_dir}/all_runs
-        Rscript {params.merge_script} {input.tables} {output.merged_seqtab}
+        mkdir -p $(dirname {log})
+        Rscript {params.merge_script} {input.tables} {output.merged_seqtab} > {log} 2>&1
         """
 
 rule dada2_remove_chimeras:
@@ -521,23 +564,30 @@ rule dada2_remove_chimeras:
         #asv_table = "{output_dir}/all_runs/merged_asv_table.rds"
     output:
         no_chimera_asvs = f"{{output_dir}}/{chimerae_dir}/no_chimera_asvs.rds"
+    log:
+        f"{logs_dir}/dada2_remove_chimeras/{chimerae_dir}.log"
     params:
         chimera_script = SCRIPT_PATHS['dada2_remove_chimeras']
     shell:
         """
-        Rscript {params.chimera_script} {input} {output.no_chimera_asvs}
+        mkdir -p $(dirname {log})
+        Rscript {params.chimera_script} {input} {output.no_chimera_asvs} > {log} 2>&1
         """
 
 rule download_dada2_db:
     output:
         dada2_db=f"{db_dir}/dada2/{out_name}"
+    log:
+        f"{logs_dir}/download_dada2_db/{assign_taxonomy_method}.log"
     params:
         method=assign_taxonomy_method
     shell:
         """
+        mkdir -p $(dirname {log})
         DB_DIR="$(dirname {output.dada2_db})"
         DB_PATH={output.dada2_db}
 
+        (
         # Ensure the directory exists
         mkdir -p "$DB_DIR"
 
@@ -609,7 +659,7 @@ rule download_dada2_db:
         else
             echo "MD5 verified for $DB_FILENAME"
         fi
-
+        ) > {log} 2>&1
         """
 
 
@@ -649,6 +699,8 @@ rule dada2_assign_taxonomy:
         asvs="{output_dir}/results/ASVs.fa",
         asvs_counts="{output_dir}/results/ASVs_counts.tsv",
         taxonomy="{output_dir}/results/ASVs_taxonomy.tsv",
+    log:
+        f"{logs_dir}/dada2_assign_taxonomy/{assign_taxonomy_method}.log"
     params:
         method=assign_taxonomy_method,
         tax_scriptdada16S=SCRIPT_PATHS['dada2_assign_taxonomy16S'],
@@ -658,14 +710,15 @@ rule dada2_assign_taxonomy:
     shell:
         """
         mkdir -p "{output_dir}/results"
+        mkdir -p $(dirname {log})
         if [[ {params.method} == "decipher_silva138" || {params.method} == "decipher_gtdb226" || {params.method} == "decipher_rdp18" ]]; then
-            Rscript {params.tax_script_dechipher} {input.no_chimera_asvs} {input.db} {output_dir}/results
+            Rscript {params.tax_script_dechipher} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
         elif [[ {params.method} == "dada2_silva_genus138" || {params.method} == "dada2_RDP_genus19" || {params.method} == "dada2_GG2_genus09" || {params.method} == "dada2_RefSeq_RDPv16" || {params.method} == "dada2_GTDB_r202" ]]; then
-             Rscript {params.tax_scriptdada16S} {input.no_chimera_asvs} {input.db} {output_dir}/results       
+             Rscript {params.tax_scriptdada16S} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
         elif [[ {params.method} == "dada2_pr2_5.1.1" ]]; then
-            Rscript {params.tax_scriptdadaPr2} {input.no_chimera_asvs} {input.db} {output_dir}/results
+            Rscript {params.tax_scriptdadaPr2} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
         elif [[ {params.method} == "dada2_18S_silva132" ]]; then
-            Rscript {params.tax_scriptdada18S} {input.no_chimera_asvs} {input.db} {output_dir}/results
+            Rscript {params.tax_scriptdada18S} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
         else
             echo "Error: method not valid."
             echo " try: ampwrap short --db-info"
@@ -689,12 +742,15 @@ rule track_reads:
     input: unpack(trackReadsDict)
     output:
         checkout="{output_dir}/results/read-count-tracking.tsv"
+    log:
+        f"{logs_dir}/track_reads/track_reads.log"
     params:
         track_script=SCRIPT_PATHS['track_reads'],
     shell:
         """
+        mkdir -p $(dirname {log})
         Rscript {params.track_script} \
-        {input.summaries} {input.fwd} {input.rev} {input.merged} {input.chimera} {output.checkout}
+        {input.summaries} {input.fwd} {input.rev} {input.merged} {input.chimera} {output.checkout} > {log} 2>&1
         """
 
 rule reporter:
@@ -705,6 +761,8 @@ rule reporter:
         ASV = "{output_dir}/results/ASVs.fa"
     output:
         report = "{output_dir}/results/final_report.txt",
+    log:
+        f"{logs_dir}/reporter/final_report.log"
     params:
         forward_p = forward_primer,
         reverse_p = reverse_primer,

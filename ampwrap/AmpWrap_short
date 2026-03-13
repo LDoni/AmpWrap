@@ -132,7 +132,7 @@ metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untri
         "read": [1, 2],
         "sample": [f[1].split(".")[0] for f in metainfo],
         "script": "script",
-        "logs": "logs",
+        "logs": os.path.join(output_dir, "logs"),
         "file_extension": extension,
         "figaro_name": figaro_name,
         "dada2_params": dada2_params if dada2_params else "",
@@ -162,6 +162,7 @@ def run_snakemake(config_path, is_quiet=False,until=None):
         "--configfile", config_path,
         "--cores", "all",
         "--nolock",
+        "--show-failed-logs",
         "--snakefile", snakefile_path
     ]
 

@@ -2,6 +2,14 @@ import pandas as pd
 import json
 import os
 import datetime
+import sys
+
+if getattr(snakemake, "log", None):
+    log_path = str(snakemake.log[0])
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    log_handle = open(log_path, "w")
+    sys.stdout = log_handle
+    sys.stderr = log_handle
 
 # Input file paths
 cutadapt_path = snakemake.input.get("cutadapt", None)
