@@ -158,7 +158,7 @@ def getReadFilesDict(wildcards, df=sample_df):
 
 
 def mergeRuns(wildcards,runs=runs):
-    files = [f"{wildcards.output_dir}/{run}/intermediate/asv_table.rds" for run in runs]
+    files = [f"{output_dir}/{run}/intermediate/asv_table.rds" for run in runs]
     return files
 
 def trackReadsDict(wildcards,runs=runs):
@@ -402,7 +402,8 @@ rule figaro:
     input:
         lambda wildcards: [
              f"{output_dir}/{wildcards.run}/figaro_inp/{sample}_R{idx}.{file_extension}"
-               for idx in indices]
+             for sample in sample_by_run[wildcards.run]
+             for idx in indices]
     output:
         trimParameters = f"{output_dir}/{{run}}/intermediate/figaro/trimParameters.json"
     log:
@@ -419,20 +420,30 @@ rule figaro:
         import os
         import json
         import sys
+        import tempfile
 
         os.makedirs(f"{output_dir}/{wildcards.run}/intermediate/figaro", exist_ok=True)
         os.makedirs(os.path.dirname(str(log)), exist_ok=True)
 
-        with open(str(log), "w") as log_handle:
-            subprocess.run([
-                "python", params.figaro_script,
-                "-i", params.input_dir,
-                "-o", f"{output_dir}/{wildcards.run}/intermediate/figaro",
-                "-a", str(params.amplen),
-                "-f", str(params.forward_primer_length),
-                "-r", str(params.reverse_primer_length),
-                "-F", params.figaroname
-            ], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+        # Run figaro on a clean temporary view of the expected inputs only.
+        with tempfile.TemporaryDirectory(
+            prefix=f"{wildcards.run}_figaro_",
+            dir=f"{output_dir}/{wildcards.run}/intermediate/figaro"
+        ) as figaro_input_dir:
+            for input_path in list(input):
+                target_path = os.path.join(figaro_input_dir, os.path.basename(str(input_path)))
+                os.symlink(os.path.abspath(str(input_path)), target_path)
+
+            with open(str(log), "w") as log_handle:
+                subprocess.run([
+                    "python", params.figaro_script,
+                    "-i", figaro_input_dir,
+                    "-o", f"{output_dir}/{wildcards.run}/intermediate/figaro",
+                    "-a", str(params.amplen),
+                    "-f", str(params.forward_primer_length),
+                    "-r", str(params.reverse_primer_length),
+                    "-F", params.figaroname
+                ], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
 
         if dry_run_tune:
             try:
@@ -472,10 +483,10 @@ rule figaro:
 rule dada2_filter:
     input:
         figaro_params = figaro_input,
-        multiQC_out   = "{output_dir}/{run}/QC/raw_qc_post_cutadapt/multiqc_report.html"
+        multiQC_out   = f"{output_dir}/{{run}}/QC/raw_qc_post_cutadapt/multiqc_report.html"
     output:
-        checkout="{output_dir}/{run}/intermediate/dada2_filtered/checkout.filter",
-        filter_summary="{output_dir}/{run}/intermediate/dada2_filtered/filter_summary.tsv",
+        checkout=f"{output_dir}/{{run}}/intermediate/dada2_filtered/checkout.filter",
+        filter_summary=f"{output_dir}/{{run}}/intermediate/dada2_filtered/filter_summary.tsv",
     log:
         f"{logs_dir}/dada2_filter/{{run}}.log"
     params:
@@ -495,9 +506,9 @@ rule dada2_filter:
 
 rule dada2_error_learning:
     input:
-        "{output_dir}/{run}/intermediate/dada2_filtered/checkout.filter"
+        f"{output_dir}/{{run}}/intermediate/dada2_filtered/checkout.filter"
     output:
-        "{output_dir}/{run}/intermediate/dada2_error_learning/err_{direction}_reads.rds"
+        f"{output_dir}/{{run}}/intermediate/dada2_error_learning/err_{{direction}}_reads.rds"
     log:
         f"{logs_dir}/dada2_error_learning/{{run}}_{{direction}}.log"
     params:
@@ -512,12 +523,12 @@ rule dada2_error_learning:
 
 rule dada2_infer_asvs:
     input:
-        err_fwd= "{output_dir}/{run}/intermediate/dada2_error_learning/err_forward_reads.rds",
-        err_rev= "{output_dir}/{run}/intermediate/dada2_error_learning/err_reverse_reads.rds"
+        err_fwd= f"{output_dir}/{{run}}/intermediate/dada2_error_learning/err_forward_reads.rds",
+        err_rev= f"{output_dir}/{{run}}/intermediate/dada2_error_learning/err_reverse_reads.rds"
     output:
-        merged_asvs = "{output_dir}/{run}/intermediate/merged_asvs.rds",
-        fwd="{output_dir}/{run}/intermediate/dada_fwd.rds",
-        rev="{output_dir}/{run}/intermediate/dada_rev.rds"
+        merged_asvs = f"{output_dir}/{{run}}/intermediate/merged_asvs.rds",
+        fwd=f"{output_dir}/{{run}}/intermediate/dada_fwd.rds",
+        rev=f"{output_dir}/{{run}}/intermediate/dada_rev.rds"
     log:
         f"{logs_dir}/dada2_infer_asvs/{{run}}.log"
     params:
@@ -530,9 +541,9 @@ rule dada2_infer_asvs:
 
 rule dada2_asv_table:
     input:
-        merged_asvs = "{output_dir}/{run}/intermediate/merged_asvs.rds"
+        merged_asvs = f"{output_dir}/{{run}}/intermediate/merged_asvs.rds"
     output:
-        asv_table = "{output_dir}/{run}/intermediate/asv_table.rds"
+        asv_table = f"{output_dir}/{{run}}/intermediate/asv_table.rds"
     log:
         f"{logs_dir}/dada2_asv_table/{{run}}.log"
     params:
@@ -547,7 +558,7 @@ rule dada2_merge_multiple_runs:
     input:
         tables = lambda wildcards: mergeRuns(wildcards)
     output:
-        merged_seqtab = "{output_dir}/all_runs/merged_asv_table.rds"
+        merged_seqtab = f"{output_dir}/all_runs/merged_asv_table.rds"
     log:
         f"{logs_dir}/dada2_merge_multiple_runs/all_runs.log"
     params:
@@ -563,7 +574,7 @@ rule dada2_remove_chimeras:
     input: lambda wc: f"{output_dir}/all_runs/merged_asv_table.rds" if is_multirun else f"{output_dir}/{runs[0]}/intermediate/asv_table.rds"
         #asv_table = "{output_dir}/all_runs/merged_asv_table.rds"
     output:
-        no_chimera_asvs = f"{{output_dir}}/{chimerae_dir}/no_chimera_asvs.rds"
+        no_chimera_asvs = f"{output_dir}/{chimerae_dir}/no_chimera_asvs.rds"
     log:
         f"{logs_dir}/dada2_remove_chimeras/{chimerae_dir}.log"
     params:
@@ -693,12 +704,12 @@ rule download_dada2_db:
 
 rule dada2_assign_taxonomy:
     input:
-        no_chimera_asvs = f"{{output_dir}}/{chimerae_dir}/no_chimera_asvs.rds",
+        no_chimera_asvs = f"{output_dir}/{chimerae_dir}/no_chimera_asvs.rds",
         db = f"{db_dir}/dada2/{out_name}"
     output:
-        asvs="{output_dir}/results/ASVs.fa",
-        asvs_counts="{output_dir}/results/ASVs_counts.tsv",
-        taxonomy="{output_dir}/results/ASVs_taxonomy.tsv",
+        asvs=f"{output_dir}/results/ASVs.fa",
+        asvs_counts=f"{output_dir}/results/ASVs_counts.tsv",
+        taxonomy=f"{output_dir}/results/ASVs_taxonomy.tsv",
     log:
         f"{logs_dir}/dada2_assign_taxonomy/{assign_taxonomy_method}.log"
     params:
@@ -741,7 +752,7 @@ rule dada2_assign_taxonomy:
 rule track_reads:
     input: unpack(trackReadsDict)
     output:
-        checkout="{output_dir}/results/read-count-tracking.tsv"
+        checkout=f"{output_dir}/results/read-count-tracking.tsv"
     log:
         f"{logs_dir}/track_reads/track_reads.log"
     params:
@@ -755,12 +766,12 @@ rule track_reads:
 
 rule reporter:
     input:
-        summaries = expand("{output_dir}/{run}/intermediate/cutadapt/cutadapt_summary.log",
-                                 output_dir=output_dir, run=runs),
-        track_report = "{output_dir}/results/read-count-tracking.tsv",
-        ASV = "{output_dir}/results/ASVs.fa"
+        summaries = expand(f"{output_dir}" + "/{run}/intermediate/cutadapt/cutadapt_summary.log",
+                           run=runs),
+        track_report = f"{output_dir}/results/read-count-tracking.tsv",
+        ASV = f"{output_dir}/results/ASVs.fa"
     output:
-        report = "{output_dir}/results/final_report.txt",
+        report = f"{output_dir}/results/final_report.txt",
     log:
         f"{logs_dir}/reporter/final_report.log"
     params:
