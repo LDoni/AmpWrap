@@ -1,12 +1,18 @@
 import multiprocessing
 import multiprocessing.pool
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 
 def calculateAvailableCores():
-    import multiprocessing
+    requested_cores = os.environ.get("FIGARO_CORES")
+    if requested_cores:
+        try:
+            return max([int(requested_cores), 1])
+        except ValueError:
+            logger.warning("Ignoring invalid FIGARO_CORES value: %s", requested_cores)
 
     return max([multiprocessing.cpu_count() - 1, 1])
 

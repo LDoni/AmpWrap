@@ -119,8 +119,29 @@ def IlluminaStandard(file_):
         )
     return file_, fileName, sample, direction
 
+def parse_cores(value):
+    if isinstance(value, int):
+        if value < 1:
+            raise argparse.ArgumentTypeError("--cores must be >= 1")
+        return value
+
+    lowered = str(value).strip().lower()
+    if lowered == "all":
+        return "all"
+
+    try:
+        parsed = int(lowered)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("--cores must be a positive integer or 'all'") from exc
+
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("--cores must be >= 1")
+    return parsed
+
+
 def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice,
-metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untrimmed, dry_run_tune, dada2_params=None):
+metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untrimmed, dry_run_tune,
+dada2_params=None, threads=None):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -139,7 +160,8 @@ metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untri
         "dada2_source": "user" if dada2_params else "figaro",
         "cutadapt_trim_by_length": cutadapt_trim_by_length,
         "disable_discard_untrimmed": disable_discard_untrimmed,
-        "dry_run_tune": dry_run_tune
+        "dry_run_tune": dry_run_tune,
+        "threads": threads if threads not in (None, "all") else os.cpu_count()
     }
 
     config_path = os.path.join(output_dir, "config.yaml")
@@ -148,7 +170,7 @@ metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untri
 
     return config_path
 
-def run_snakemake(config_path, is_quiet=False,until=None):
+def run_snakemake(config_path, is_quiet=False, until=None, cores="all"):
     conda_bin_dir = os.path.join(os.environ['CONDA_PREFIX'], 'bin')
     snakefile_path = os.path.join(conda_bin_dir, 'snakefile.short')
 
@@ -160,7 +182,7 @@ def run_snakemake(config_path, is_quiet=False,until=None):
     args = [
         "snakemake",
         "--configfile", config_path,
-        "--cores", "all",
+        "--cores", str(cores),
         "--nolock",
         "--show-failed-logs",
         "--snakefile", snakefile_path
@@ -211,6 +233,7 @@ def main():
     parser.add_argument("--cutadapt_disable_discard_untrimmed",help="Deactivate cutadapt option --discard-untrimmed",action="store_true",default=False)
     parser.add_argument("--dada2_params",type=str,help="Semicolon-separated list of DADA2 parameters to override Figaro (e.g., 'truncLen=c(240,200);maxEE=c(2,2)'")
     parser.add_argument("--dry-run-tune", action="store_true", help="Run only Figaro tuning and show first 5 results, then clean up")
+    parser.add_argument("-c", "--cores", type=parse_cores, default="all", help="Limit Snakemake cores (default: all)")
 
     args = parser.parse_args()
 
@@ -230,6 +253,7 @@ def main():
     disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
     dry_run_tune = args.dry_run_tune
     cutadapt_trim_by_length = args.cutadapt_trim_by_length
+    cores = args.cores
 
     if args.dada2_params:
         dada2_params = args.dada2_params.strip()
@@ -309,8 +333,9 @@ def main():
                 cutadapt_trim_by_length=cutadapt_trim_by_length,
                 disable_discard_untrimmed=disable_discard_untrimmed,
                 dry_run_tune=dry_run_tune,
-                dada2_params=dada2_params)
-    run_snakemake(config_path, is_quiet)
+                dada2_params=dada2_params,
+                threads=cores)
+    run_snakemake(config_path, is_quiet, cores=cores)
 
 
 if __name__ == "__main__":

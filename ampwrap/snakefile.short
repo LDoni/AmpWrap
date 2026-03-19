@@ -408,6 +408,7 @@ rule figaro:
         trimParameters = f"{output_dir}/{{run}}/intermediate/figaro/trimParameters.json"
     log:
         f"{logs_dir}/figaro/{{run}}.log"
+    threads: threads
     params:
         amplen = amplicon_length,
         forward_primer_length = forward_primer_length,
@@ -434,6 +435,9 @@ rule figaro:
                 target_path = os.path.join(figaro_input_dir, os.path.basename(str(input_path)))
                 os.symlink(os.path.abspath(str(input_path)), target_path)
 
+            figaro_env = os.environ.copy()
+            figaro_env["FIGARO_CORES"] = str(threads)
+
             with open(str(log), "w") as log_handle:
                 subprocess.run([
                     "python", params.figaro_script,
@@ -443,7 +447,7 @@ rule figaro:
                     "-f", str(params.forward_primer_length),
                     "-r", str(params.reverse_primer_length),
                     "-F", params.figaroname
-                ], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+                ], check=True, stdout=log_handle, stderr=subprocess.STDOUT, env=figaro_env)
 
         if dry_run_tune:
             try:
