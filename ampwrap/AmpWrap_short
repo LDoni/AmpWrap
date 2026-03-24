@@ -247,7 +247,7 @@ def validate_paired_samples(parsed_files, input_dir):
 def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice,
 metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untrimmed, dry_run_tune,
 dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
-asv_length_tolerance=None):
+asv_length_tolerance=None, bigdata_mode=False):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -271,7 +271,8 @@ asv_length_tolerance=None):
         "cutadapt_trim_by_length": cutadapt_trim_by_length,
         "disable_discard_untrimmed": disable_discard_untrimmed,
         "dry_run_tune": dry_run_tune,
-        "threads": threads if threads not in (None, "all") else os.cpu_count()
+        "threads": threads if threads not in (None, "all") else os.cpu_count(),
+        "bigdata_mode": bool(bigdata_mode)
     }
     if asv_length_tolerance is not None:
         config["asv_length_min"] = max(1, int(amplen) - int(asv_length_tolerance))
@@ -377,6 +378,10 @@ def main():
     )
     general.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
     general.add_argument("--db-info", action="store_true", help="Show available databases and exit")
+    general.add_argument(
+        "--bigdata", action="store_true",
+        help="Apply safer defaults for very deep datasets (currently enables auto read-cap and limits cores if not specified).",
+    )
 
     denoising = parser.add_argument_group("denoising and trimming")
     denoising.add_argument(
@@ -443,6 +448,13 @@ def main():
     dry_run_tune = args.dry_run_tune
     cutadapt_trim_by_length = args.cutadapt_trim_by_length
     cores = args.cores
+
+    if args.bigdata:
+        if args.max_reads_per_sample is None:
+            args.max_reads_per_sample = "auto"
+        if cores == "all":
+            cores = 4
+        print(f"INFO: --bigdata enabled, using max_reads_per_sample={args.max_reads_per_sample} and cores={cores}")
 
     try:
         dada2_params = validate_dada2_params(args.dada2_params)
@@ -554,7 +566,8 @@ def main():
                 loess_model=args.loess_model,
                 max_reads_per_sample=args.max_reads_per_sample,
                 db_dir=args.db_dir,
-                asv_length_tolerance=args.asv_length_tolerance)
+                asv_length_tolerance=args.asv_length_tolerance,
+                bigdata_mode=args.bigdata)
     run_snakemake(config_path, is_quiet, cores=cores)
 
 
