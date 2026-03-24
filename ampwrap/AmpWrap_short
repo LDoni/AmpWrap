@@ -155,6 +155,9 @@ def parse_positive_int(value, option_name):
 
 
 def parse_max_reads(value):
+    lowered = str(value).strip().lower()
+    if lowered == "auto":
+        return "auto"
     return parse_positive_int(value, "--max-reads-per-sample")
 
 
@@ -324,7 +327,7 @@ def main():
         description=(
             "ampwrap short: process paired-end Illumina amplicon reads and assign taxonomy.\n\n"
             "Supported input naming:\n"
-            "  FVieira:   sample_R1.fastq.gz / sample_R2.fastq.gz\n"
+            "  Custom:    sample_R1.fastq.gz / sample_R2.fastq.gz\n"
             "  Illumina:  sample_S1_L001_R1_001.fastq.gz / sample_S1_L001_R2_001.fastq.gz"
         ),
         formatter_class=ReadableHelpFormatter,
@@ -335,7 +338,7 @@ def main():
             "  ampwrap short -i reads_dir -a FORWARD -A REVERSE \\\n"
             "    --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'\n"
             "  ampwrap short -i reads_dir -a FORWARD -A REVERSE -l 372 \\\n"
-            "    --loess_model auto --max-reads-per-sample 200000 --cores 4"
+            "    --loess_model auto --max-reads-per-sample auto --cores 4"
         ),
     )
     required = parser.add_argument_group("required arguments")
@@ -398,8 +401,8 @@ def main():
     denoising.add_argument(
         "--max-reads-per-sample", type=parse_max_reads,
         help=(
-            "Randomly cap reads per sample before QC/trimming.\n"
-            "Useful for very deep NovaSeq libraries."
+            "Cap reads per sample before QC/trimming.\n"
+            "Use an integer for a fixed cap or 'auto' for plateau-based selection on deep libraries."
         ),
     )
 
@@ -497,7 +500,7 @@ def main():
             print(
                 f"ERROR: Files in '{input_dir}' do not follow a supported paired-end naming convention.\n"
                 "Supported examples:\n"
-                "  - FVieira: sample_R1.fastq.gz / sample_R2.fastq.gz\n"
+                "  - Custom: sample_R1.fastq.gz / sample_R2.fastq.gz\n"
                 "  - Illumina: sample_S1_L001_R1_001.fastq.gz / sample_S1_L001_R2_001.fastq.gz\n"
                 f"Parser details: {' | '.join(parser_errors) if parser_errors else 'no parser matched'}"
             )

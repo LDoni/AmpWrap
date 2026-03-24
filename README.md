@@ -205,6 +205,13 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --ma
 
 This is useful for oversized NovaSeq metabarcoding libraries when you want to keep a reproducible random subset of reads and reduce runtime and memory usage.
 
+Automatic cap selection for deep libraries:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --max-reads-per-sample auto
+```
+
+In `auto` mode, AmpWrap estimates a plateau from subsampled reads using dereplicated non-singleton exact sequences and keeps all reads unless a sensible cap is supported by the data.
+
 Store databases in a stable shared directory:
 ```sh
 ampwrap short \
@@ -426,4 +433,17 @@ ampwrap short \
 ```
 
 This is useful when the biological target typically needs around `100k-200k` reads per sample but sequencing produced much deeper libraries.
+
+If you prefer a data-driven decision instead of a fixed number, use:
+
+```sh
+ampwrap short \
+  -i input_directory \
+  -a FORWARD \
+  -A REVERSE \
+  -l 372 \
+  --max-reads-per-sample auto
+```
+
+This mode estimates a saturation curve on subsampled reads and only caps aggressively when the gain in non-singleton exact sequence complexity becomes marginal.
  
