@@ -219,6 +219,8 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --bi
 
 `--bigdata` currently enables safer defaults for deep datasets and uses the streaming-style sample inference workflow.
 
+Without `--bigdata`, AmpWrap keeps the standard DADA2-style inference path.
+
 Optional ASV length filter after merging/chimera removal:
 ```sh
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length-tolerance 20

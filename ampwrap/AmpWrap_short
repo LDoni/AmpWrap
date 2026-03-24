@@ -99,11 +99,13 @@ This may affect the FIGARO optimization of dada2 denoising parameters.
 
 def FVieiraStandard(file_):
     fileName = os.path.basename(file_)
-    basename = fileName.split(".")[0]
+    basename = re.sub(r"\.(fastq|fq)(\.gz)?$", "", fileName, flags=re.IGNORECASE)
     try:
-        sample, direction = basename.split("_")
+        sample, direction = basename.rsplit("_", 1)
         direction = direction.replace("R", "").replace("r", "")
         direction = int(direction)
+        if direction not in (1, 2) or not sample:
+            raise ValueError
     except ValueError:
         raise ValueError(
             f"{fileName} does not appear to be a valid file for this standard. Please check file naming convention."

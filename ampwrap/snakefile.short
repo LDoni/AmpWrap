@@ -54,6 +54,7 @@ SCRIPT_PATHS = {
     'dada2_filter': os.path.join(SCRIPTS_DIR, 'dada2_filter.R'),
     'dada2_learn_errors': os.path.join(SCRIPTS_DIR, 'dada2_learn_errors.R'),
     'dada2_infer_asvs': os.path.join(SCRIPTS_DIR, 'dada2_infer_asvs.R'),
+    'dada2_infer_asvs_bigdata': os.path.join(SCRIPTS_DIR, 'dada2_infer_asvs_bigdata.R'),
     'dada2_remove_chimeras': os.path.join(SCRIPTS_DIR, 'dada2_remove_chimeras.R'),
     'dada2_merge_multiple_runs' : os.path.join(SCRIPTS_DIR, 'dada2_merge_multiple_runs.R'),
     'dada2_assign_taxonomy16S': os.path.join(SCRIPTS_DIR, 'dada2_assign_taxonomy16S.R'),
@@ -567,9 +568,61 @@ rule figaro:
         import json
         import sys
         import tempfile
+        import gzip
 
         os.makedirs(f"{output_dir}/{wildcards.run}/intermediate/figaro", exist_ok=True)
         os.makedirs(os.path.dirname(str(log)), exist_ok=True)
+
+        def fastq_length_stats(path):
+            stats = subprocess.run(
+                ["seqkit", "stats", "-Ta", path],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            lines = [line for line in stats.stdout.strip().splitlines() if line.strip()]
+            if len(lines) < 2:
+                raise RuntimeError(f"Unable to parse seqkit stats for {path}")
+            fields = lines[-1].split("\t")
+            if len(fields) < 8:
+                raise RuntimeError(f"Unexpected seqkit stats format for {path}: {lines[-1]}")
+            return int(fields[5]), int(fields[7])
+
+        def trim_fastq_to_length(src, dst, target_len):
+            open_in = gzip.open if src.endswith(".gz") else open
+            open_out = gzip.open if dst.endswith(".gz") else open
+
+            with open_in(src, "rt") as handle_in, open_out(dst, "wt") as handle_out:
+                while True:
+                    header = handle_in.readline()
+                    if not header:
+                        break
+                    sequence = handle_in.readline().rstrip("\n")
+                    plus = handle_in.readline()
+                    quality = handle_in.readline().rstrip("\n")
+
+                    handle_out.write(header)
+                    handle_out.write(sequence[:target_len] + "\n")
+                    handle_out.write(plus)
+                    handle_out.write(quality[:target_len] + "\n")
+
+        length_stats = {}
+        target_lengths = {}
+        for direction in ("1", "2"):
+            direction_inputs = [
+                str(path)
+                for path in list(input)
+                if re.search(rf"_R{direction}\.", os.path.basename(str(path)))
+            ]
+            direction_stats = []
+            for path in direction_inputs:
+                stats = fastq_length_stats(path)
+                length_stats[path] = stats
+                direction_stats.append(stats)
+
+            if not direction_stats:
+                raise RuntimeError(f"No Figaro input files found for read direction R{direction}")
+            target_lengths[direction] = min(min_len for min_len, _ in direction_stats)
 
         # Run figaro on a clean temporary view of the expected inputs only.
         with tempfile.TemporaryDirectory(
@@ -577,13 +630,36 @@ rule figaro:
             dir=f"{output_dir}/{wildcards.run}/intermediate/figaro"
         ) as figaro_input_dir:
             for input_path in list(input):
-                target_path = os.path.join(figaro_input_dir, os.path.basename(str(input_path)))
-                os.symlink(os.path.abspath(str(input_path)), target_path)
+                input_name = os.path.basename(str(input_path))
+                match = re.match(r"(.+)_R([12])\.(.+)$", input_name)
+                if not match:
+                    raise ValueError(f"Unexpected Figaro input filename: {input_name}")
+
+                original_sample, direction, extension = match.groups()
+                renamed_sample = sample_renamed_dict.get(original_sample, original_sample.replace("_", "-"))
+                target_name = f"{renamed_sample}_R{direction}.{extension}"
+                target_path = os.path.join(figaro_input_dir, target_name)
+                source_path = os.path.abspath(str(input_path))
+                min_len, max_len = length_stats[source_path]
+                target_len = target_lengths[direction]
+
+                if min_len == max_len == target_len:
+                    os.symlink(source_path, target_path)
+                else:
+                    trim_fastq_to_length(source_path, target_path, target_len)
 
             figaro_env = os.environ.copy()
             figaro_env["FIGARO_CORES"] = str(threads)
 
             with open(str(log), "w") as log_handle:
+                log_handle.write(
+                    "Normalized Figaro read lengths: "
+                    + ", ".join(
+                        f"R{direction}={target_lengths[direction]}"
+                        for direction in ("1", "2")
+                    )
+                    + "\n"
+                )
                 subprocess.run([
                     "python", params.figaro_script,
                     "-i", figaro_input_dir,
@@ -688,7 +764,7 @@ rule dada2_infer_asvs:
     log:
         f"{logs_dir}/dada2_infer_asvs/{{run}}.log"
     params:
-        infer_script = SCRIPT_PATHS['dada2_infer_asvs']
+        infer_script = SCRIPT_PATHS['dada2_infer_asvs_bigdata'] if config.get("bigdata_mode", False) else SCRIPT_PATHS['dada2_infer_asvs']
     shell:
         """
         mkdir -p $(dirname {log})
