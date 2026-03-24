@@ -212,6 +212,13 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --ma
 
 In `auto` mode, AmpWrap estimates a plateau from subsampled reads using dereplicated non-singleton exact sequences and keeps all reads unless a sensible cap is supported by the data.
 
+Optional ASV length filter after merging/chimera removal:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length-tolerance 20
+```
+
+This keeps only merged ASVs within `amplicon_length +/- tolerance`.
+
 Store databases in a stable shared directory:
 ```sh
 ampwrap short \

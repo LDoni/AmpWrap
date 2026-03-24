@@ -732,11 +732,13 @@ rule dada2_remove_chimeras:
     log:
         f"{logs_dir}/dada2_remove_chimeras/{chimerae_dir}.log"
     params:
-        chimera_script = SCRIPT_PATHS['dada2_remove_chimeras']
+        chimera_script = SCRIPT_PATHS['dada2_remove_chimeras'],
+        asv_length_min = config.get("asv_length_min", ""),
+        asv_length_max = config.get("asv_length_max", "")
     shell:
         """
         mkdir -p $(dirname {log})
-        Rscript {params.chimera_script} {input} {output.no_chimera_asvs} > {log} 2>&1
+        Rscript {params.chimera_script} {input} {output.no_chimera_asvs} {params.asv_length_min} {params.asv_length_max} > {log} 2>&1
         """
 
 rule download_dada2_db:

@@ -161,6 +161,10 @@ def parse_max_reads(value):
     return parse_positive_int(value, "--max-reads-per-sample")
 
 
+def parse_asv_length_tolerance(value):
+    return parse_positive_int(value, "--asv-length-tolerance")
+
+
 def default_db_dir():
     env_value = os.environ.get("AMPWRAP_DB_DIR")
     if env_value:
@@ -242,7 +246,8 @@ def validate_paired_samples(parsed_files, input_dir):
 
 def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice,
 metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untrimmed, dry_run_tune,
-dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None):
+dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
+asv_length_tolerance=None):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -268,6 +273,9 @@ dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db
         "dry_run_tune": dry_run_tune,
         "threads": threads if threads not in (None, "all") else os.cpu_count()
     }
+    if asv_length_tolerance is not None:
+        config["asv_length_min"] = max(1, int(amplen) - int(asv_length_tolerance))
+        config["asv_length_max"] = int(amplen) + int(asv_length_tolerance)
 
     config_path = os.path.join(output_dir, "config.yaml")
     with open(config_path, "w") as f:
@@ -405,6 +413,13 @@ def main():
             "Use an integer for a fixed cap or 'auto' for plateau-based selection on deep libraries."
         ),
     )
+    denoising.add_argument(
+        "--asv-length-tolerance", type=parse_asv_length_tolerance,
+        help=(
+            "Keep only merged ASVs within amplicon_length +/- tolerance.\n"
+            "Useful when merged ASV lengths vary unexpectedly."
+        ),
+    )
 
     execution = parser.add_argument_group("execution")
     execution.add_argument("-c", "--cores", type=parse_cores, default="all", help="Limit Snakemake cores")
@@ -538,7 +553,8 @@ def main():
                 threads=cores,
                 loess_model=args.loess_model,
                 max_reads_per_sample=args.max_reads_per_sample,
-                db_dir=args.db_dir)
+                db_dir=args.db_dir,
+                asv_length_tolerance=args.asv_length_tolerance)
     run_snakemake(config_path, is_quiet, cores=cores)
 
 
