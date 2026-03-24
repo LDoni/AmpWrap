@@ -4,6 +4,7 @@ args <- commandArgs(trailingOnly = TRUE)
 input_dir <- args[1]
 output_dir <- args[2]
 loess_model_arg <- ifelse(length(args) >= 3, args[3], "auto")
+bigdata_mode <- tolower(ifelse(length(args) >= 4, args[4], "no")) == "yes"
 
 options(warn = -1)
 suppressPackageStartupMessages(library(dada2))
@@ -14,6 +15,7 @@ QUAL_SCAN_READS <- 4000
 AUTO_SPLITS <- 3
 AUTO_MARGIN <- 0.005
 AUTO_TRAIN_NBASES <- 1500000
+BIGDATA_LEARN_NBASES <- 1e8
 
 normalize_request <- function(value) {
     if (is.null(value) || is.na(value) || value == "") {
@@ -397,8 +399,9 @@ forward_selection <- selections[[1]]
 reverse_selection <- selections[[2]]
 
 suppressWarnings({
-    err_fwd <- learn_model(fwd, forward_selection$selected_model, nbases = NULL, randomize = TRUE)
-    err_rev <- learn_model(rev, reverse_selection$selected_model, nbases = NULL, randomize = TRUE)
+    final_nbases <- if (bigdata_mode) BIGDATA_LEARN_NBASES else NULL
+    err_fwd <- learn_model(fwd, forward_selection$selected_model, nbases = final_nbases, randomize = TRUE)
+    err_rev <- learn_model(rev, reverse_selection$selected_model, nbases = final_nbases, randomize = TRUE)
 
     saveRDS(err_fwd, file.path(output_dir, "err_forward_reads.rds"))
     saveRDS(err_rev, file.path(output_dir, "err_reverse_reads.rds"))

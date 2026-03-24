@@ -664,7 +664,8 @@ rule dada2_error_learning:
         f"{logs_dir}/dada2_error_learning/{{run}}.log"
     params:
         learn_script = SCRIPT_PATHS['dada2_learn_errors'],
-        loess_model = config.get("loess_model", "auto")
+        loess_model = config.get("loess_model", "auto"),
+        bigdata_mode = "yes" if config.get("bigdata_mode", False) else "no"
     shell:
         """
         mkdir -p {output_dir}/{wildcards.run}/intermediate/dada2_error_learning
@@ -672,7 +673,8 @@ rule dada2_error_learning:
         Rscript {params.learn_script} \
         {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
         {output_dir}/{wildcards.run}/intermediate/dada2_error_learning \
-        {params.loess_model} > {log} 2>&1
+        {params.loess_model} \
+        {params.bigdata_mode} > {log} 2>&1
         """
 
 rule dada2_infer_asvs:

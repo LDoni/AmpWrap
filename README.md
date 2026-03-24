@@ -212,6 +212,13 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --ma
 
 In `auto` mode, AmpWrap estimates a plateau from subsampled reads using dereplicated non-singleton exact sequences and keeps all reads unless a sensible cap is supported by the data.
 
+Convenience profile for very large runs:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --bigdata
+```
+
+`--bigdata` currently enables safer defaults for deep datasets and uses the streaming-style sample inference workflow.
+
 Optional ASV length filter after merging/chimera removal:
 ```sh
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length-tolerance 20
