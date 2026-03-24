@@ -1,5 +1,9 @@
-for i in AmpWrap_long  AmpWrap_short  ampwrap  scripts  snakefile.long  snakefile.short
+for i in AmpWrap_long AmpWrap_short ampwrap scripts snakefile.long snakefile.short
 do
 	cp -r $i $CONDA_PREFIX/bin
 	chmod -R +x $CONDA_PREFIX/bin/$i
 done
+
+if [ -d db_s ]; then
+	cp -r db_s $CONDA_PREFIX/bin
+fi
