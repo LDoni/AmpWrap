@@ -6,6 +6,7 @@ version = "1.1.1"
 
 # Directories and parameters
 start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+analysis_start = config.get("analysis_start", start_time)
 input_dir = config["input_dir"]
 output_dir = config["output_dir"]
 logs_dir = config.get("logs", os.path.join(output_dir, "logs"))
@@ -26,6 +27,7 @@ param_source = config["dada2_source"]
 dry_run_tune = config.get("dry_run_tune", False)
 cutadapt_trim_by_length = config.get("cutadapt_trim_by_length", False)
 USE_FIGARO = (config.get("dada2_source", "figaro") == "figaro")
+max_reads_per_sample = int(config.get("max_reads_per_sample", 0) or 0)
 
 run_dirs = config.get("run_dirs","")
 if run_dirs != "":
@@ -38,7 +40,13 @@ else:
 outdirs = expand("",run_dir=run_dirs)
 
 CONDA_BIN = os.path.join(os.environ.get('CONDA_PREFIX', ''), 'bin')
-SCRIPTS_DIR = os.path.join(CONDA_BIN, 'scripts') if os.path.exists(os.path.join(CONDA_BIN, 'scripts')) else 'scripts'
+LOCAL_SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(workflow.snakefile)), 'scripts')
+if os.path.exists(LOCAL_SCRIPTS_DIR):
+    SCRIPTS_DIR = LOCAL_SCRIPTS_DIR
+elif os.path.exists(os.path.join(CONDA_BIN, 'scripts')):
+    SCRIPTS_DIR = os.path.join(CONDA_BIN, 'scripts')
+else:
+    SCRIPTS_DIR = 'scripts'
 
 
 SCRIPT_PATHS = {
@@ -137,24 +145,82 @@ for sample in samples:
 
 
 # tax db
+DB_METADATA = {
+    "decipher_silva138": {
+        "filename": "SILVA_SSU_r138.2_v2.RData",
+        "md5": "ed0b7e62542cd5615fb77ef15bcb9de0",
+        "url": "https://drive.usercontent.google.com/download?export=download&id=11YYCiB-gJqAP7-wIu35smorelLE-7IgJ&confirm=t",
+    },
+    "decipher_gtdb226": {
+        "filename": "GTDB_r226_classifier.RData",
+        "md5": "2aca8a1cfc4c8357a61eb51413f4e476",
+        "url": "https://drive.usercontent.google.com/download?export=download&id=1wMS2jskFeI9RGXn3fBO_yyvciiB8PMu0&confirm=t",
+    },
+    "decipher_rdp18": {
+        "filename": "RDP_TrainingSet_v18.RData",
+        "md5": "af228a61cf5c382e847770c53a8d531b",
+        "url": "https://drive.usercontent.google.com/download?export=download&id=1AsgpYQtheSuZbFkOD9HFZZm81A-IM5UO&confirm=t",
+    },
+    "dada2_silva_genus138": {
+        "filename": "silva_nr99_v138.2_toGenus_trainset.fa.gz",
+        "md5": "1764e2a36b4500ccb1c7d5261948a414",
+        "url": "https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1",
+    },
+    "dada2_RDP_genus19": {
+        "filename": "rdp_19_toGenus_trainset.fa.gz",
+        "md5": "390b8a359c45648adf538e72a1ee7e28",
+        "url": "https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz?download=1",
+    },
+    "dada2_GG2_genus09": {
+        "filename": "gg2_2024_09_toGenus_trainset.fa.gz",
+        "md5": "82a2571c9ff5009cbd2f3fded79069ed",
+        "url": "https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1",
+    },
+    "dada2_RefSeq_RDPv16": {
+        "filename": "RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz",
+        "md5": "53aac0449c41db387d78a3c17b06ad07",
+        "url": "https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1",
+    },
+    "dada2_GTDB_r202": {
+        "filename": "GTDB_bac120_arc122_ssu_r202_Genus.fa.gz",
+        "md5": "40c1ee877ad2c5dca81e1cdf9a52ac3a",
+        "url": "https://zenodo.org/records/4735821/files/GTDB_bac120_arc122_ssu_r202_Genus.fa.gz?download=1",
+    },
+    "dada2_18S_silva132": {
+        "filename": "DADA2_silva_v132_18S.fa",
+        "md5": "3bbab8029675474805d1a5d24cf23bb9",
+        "url": "https://zenodo.org/records/10444891/files/DADA2_silva_v132_18S.fa?download=1",
+    },
+    "dada2_pr2_5.1.1": {
+        "filename": "pr2_version_5.1.1_SSU_dada2.fasta.gz",
+        "md5": "cab726022035241ce1f05a24dd3ef707",
+        "url": "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz",
+    },
+}
+
 assign_taxonomy_method = config["assign_taxonomy_method"]
-out_name = {
-    "dada2_silva_genus138": "silva_nr99_v138.2_toGenus_trainset.fa.gz",
-    "dada2_RDP_genus19": "rdp_19_toGenus_trainset.fa.gz",
-    "dada2_GG2_genus09": "gg2_2024_09_toGenus_trainset.fa.gz",
-    "dada2_RefSeq_RDPv16": "RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz",
-    "dada2_GTDB_r202": "GTDB_bac120_arc122_ssu_r202_Genus.fa.gz",
-    "decipher_silva138": "SILVA_SSU_r138_2_2024.RData",
-    "decipher_gtdb226": "GTDB_r226-mod_April2025.RData",
-    "decipher_rdp18": "RDP_v18-mod_July2020.RData"
-}.get(assign_taxonomy_method)
+db_config = DB_METADATA.get(assign_taxonomy_method)
+if db_config is None:
+    raise ValueError(f"Database method not recognized: {assign_taxonomy_method}")
+out_name = db_config["filename"]
 
 # functions for inputs
-def getReadFilesDict(wildcards, df=sample_df):
+def getOriginalReadFilesDict(wildcards, df=sample_df):
     rows = df[(df["Sample"] == wildcards.sample) & (df["Run"] == wildcards.run)]
     out = {f"r{row['Direction']}": row["Path"] for _, row in rows.iterrows()}
-    print(wildcards,out)
     return out
+
+
+def getReadFilesDict(wildcards):
+    return {
+        "r1": f"{output_dir}/{wildcards.run}/figaro_inp/{wildcards.sample}_R1.{file_extension}",
+        "r2": f"{output_dir}/{wildcards.run}/figaro_inp/{wildcards.sample}_R2.{file_extension}",
+    }
+
+
+def stable_seed(sample, run):
+    text = f"{run}:{sample}"
+    return sum((idx + 1) * ord(ch) for idx, ch in enumerate(text)) % 100000 + 11
 
 
 def mergeRuns(wildcards,runs=runs):
@@ -249,27 +315,58 @@ rule all:
 
 
 rule input_symlink:
-    input: lambda wildcards: renamed_samples2files[wildcards.sample][wildcards.index]
+    input: lambda wildcards: getOriginalReadFilesDict(wildcards)[f"r{wildcards.index}"]
     output: f"{output_dir}/{{run}}/figaro_inp/{{sample}}_R{{index,[^\._]+}}.{file_extension}"
     log: f"{logs_dir}/input_symlink/{{run}}/{{sample}}_R{{index}}.log"
-    run:
-        import os
-        log_path = str(log)
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
-        target_dir = os.path.dirname(str(output))
-        os.makedirs(target_dir, exist_ok=True)
-        src, target = os.path.abspath(str(input)), os.path.abspath(str(output))
+    params:
+        max_reads=max_reads_per_sample,
+        sample_seed=lambda wildcards: stable_seed(wildcards.sample, wildcards.run)
+    shell:
+        r"""
+        mkdir -p $(dirname {log})
+        mkdir -p $(dirname {output})
+        SRC=$(realpath {input})
+        TARGET=$(realpath -m {output})
 
-        with open(log_path, "w") as log_handle:
-            log_handle.write(f"Creating symlink for {wildcards.sample} R{wildcards.index}\n")
-            log_handle.write(f"source={src}\n")
-            log_handle.write(f"target={target}\n")
-            try:
-                os.symlink(src, target)
-                log_handle.write("Symlink created successfully.\n")
-            except Exception as exc:
-                log_handle.write(f"Symlink creation failed: {exc}\n")
-                raise
+        if [ {params.max_reads} -gt 0 ]; then
+            TOTAL_READS=$(seqkit stats -T "$SRC" | awk 'NR==2 {{print $4}}')
+            if [ -z "$TOTAL_READS" ]; then
+                echo "Unable to determine read count for $SRC" > {log}
+                exit 1
+            fi
+
+            if [ "$TOTAL_READS" -le {params.max_reads} ]; then
+                ln -sf "$SRC" "$TARGET"
+                {{
+                    echo "mode=symlink"
+                    echo "source=$SRC"
+                    echo "target=$TARGET"
+                    echo "reads_total=$TOTAL_READS"
+                    echo "reads_kept=$TOTAL_READS"
+                }} > {log}
+            else
+                PROPORTION=$(awk -v max={params.max_reads} -v total="$TOTAL_READS" 'BEGIN {{printf "%.12f", max/total}}')
+                seqkit sample -2 -p "$PROPORTION" -s {params.sample_seed} "$SRC" -o "$TARGET" > /dev/null
+                KEPT_READS=$(seqkit stats -T "$TARGET" | awk 'NR==2 {{print $4}}')
+                {{
+                    echo "mode=downsample"
+                    echo "source=$SRC"
+                    echo "target=$TARGET"
+                    echo "reads_total=$TOTAL_READS"
+                    echo "reads_requested_max={params.max_reads}"
+                    echo "reads_kept=$KEPT_READS"
+                    echo "seed={params.sample_seed}"
+                }} > {log}
+            fi
+        else
+            ln -sf "$SRC" "$TARGET"
+            {{
+                echo "mode=symlink"
+                echo "source=$SRC"
+                echo "target=$TARGET"
+            }} > {log}
+        fi
+        """
 
 rule cutadapt:
      input:
@@ -512,17 +609,22 @@ rule dada2_error_learning:
     input:
         f"{output_dir}/{{run}}/intermediate/dada2_filtered/checkout.filter"
     output:
-        f"{output_dir}/{{run}}/intermediate/dada2_error_learning/err_{{direction}}_reads.rds"
+        err_fwd=f"{output_dir}/{{run}}/intermediate/dada2_error_learning/err_forward_reads.rds",
+        err_rev=f"{output_dir}/{{run}}/intermediate/dada2_error_learning/err_reverse_reads.rds",
+        metadata=f"{output_dir}/{{run}}/intermediate/dada2_error_learning/model_selection.tsv"
     log:
-        f"{logs_dir}/dada2_error_learning/{{run}}_{{direction}}.log"
+        f"{logs_dir}/dada2_error_learning/{{run}}.log"
     params:
-        learn_script = SCRIPT_PATHS['dada2_learn_errors']
+        learn_script = SCRIPT_PATHS['dada2_learn_errors'],
+        loess_model = config.get("loess_model", "auto")
     shell:
         """
         mkdir -p {output_dir}/{wildcards.run}/intermediate/dada2_error_learning
         mkdir -p $(dirname {log})
         Rscript {params.learn_script} \
-        {output_dir}/{wildcards.run}/intermediate/dada2_filtered {output_dir}/{wildcards.run}/intermediate/dada2_error_learning > {log} 2>&1
+        {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
+        {output_dir}/{wildcards.run}/intermediate/dada2_error_learning \
+        {params.loess_model} > {log} 2>&1
         """
 
 rule dada2_infer_asvs:
@@ -595,84 +697,36 @@ rule download_dada2_db:
     log:
         f"{logs_dir}/download_dada2_db/{assign_taxonomy_method}.log"
     params:
-        method=assign_taxonomy_method
+        url=db_config["url"],
+        md5=db_config["md5"],
+        filename=db_config["filename"]
     shell:
         """
         mkdir -p $(dirname {log})
         DB_DIR="$(dirname {output.dada2_db})"
         DB_PATH={output.dada2_db}
+        TMP_PATH="${{DB_PATH}}.tmp"
 
         (
-        # Ensure the directory exists
         mkdir -p "$DB_DIR"
 
-        # Define URLs and MD5s
-        if [ "{params.method}" == "decipher_silva138" ]; then
-            DB_URL="https://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2_2024.RData"
-            DB_MD5="4e272e39c2d71f5d3e7a31b00dbb1df4"
-            DB_FILENAME="SILVA_SSU_r138_2_2024.RData"
-        elif [ "{params.method}" == "decipher_gtdb226" ]; then
-            DB_URL="https://www2.decipher.codes/data/Downloads/TrainingSets/GTDB_r226-mod_April2025.RData"
-            DB_MD5="2aca8a1cfc4c8357a61eb51413f4e476"
-            DB_FILENAME="GTDB_r226-mod_April2025.RData"
-        elif [ "{params.method}" == "decipher_rdp18" ]; then
-            DB_URL="https://www2.decipher.codes/data/Downloads/TrainingSets/RDP_v18-mod_July2020.RData"
-            DB_MD5="e0e8ed5bc34b28ab416df2d7fc1568ec"
-            DB_FILENAME="RDP_v18-mod_July2020.RData"
-        elif [ "{params.method}" == "dada2_silva_genus138" ]; then
-            DB_URL="https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1"
-            DB_MD5="1764e2a36b4500ccb1c7d5261948a414"
-            DB_FILENAME="silva_nr99_v138.2_toGenus_trainset.fa.gz"
-        elif [ "{params.method}" == "dada2_RDP_genus19" ]; then
-            DB_URL="https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz?download=1"
-            DB_MD5="390b8a359c45648adf538e72a1ee7e28"
-            DB_FILENAME="rdp_19_toGenus_trainset.fa.gz"
-        elif [ "{params.method}" == "dada2_GG2_genus09" ]; then
-            DB_URL="https://zenodo.org/records/14169078/files/gg2_2024_09_toGenus_trainset.fa.gz?download=1"
-            DB_MD5="82a2571c9ff5009cbd2f3fded79069ed"
-            DB_FILENAME="gg2_2024_09_toGenus_trainset.fa.gz"
-        elif [ "{params.method}" == "dada2_RefSeq_RDPv16" ]; then
-            DB_URL="https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1"
-            DB_MD5="53aac0449c41db387d78a3c17b06ad07"
-            DB_FILENAME="RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz"
-        elif [ "{params.method}" == "dada2_GTDB_r202" ]; then
-            DB_URL="https://zenodo.org/records/4735821/files/GTDB_bac120_arc122_ssu_r202_Genus.fa.gz?download=1"
-            DB_MD5="40c1ee877ad2c5dca81e1cdf9a52ac3a"
-            DB_FILENAME="GTDB_bac120_arc122_ssu_r202_Genus.fa.gz"
-        elif [ "{params.method}" == "dada2_18S_silva132" ]; then
-            DB_URL="https://zenodo.org/records/10444891/files/DADA2_silva_v132_18S.fa?download=1"
-            DB_MD5="3bbab8029675474805d1a5d24cf23bb9"
-            DB_FILENAME="DADA2_silva_v132_18S.fa"
-        elif [ "{params.method}" == "dada2_pr2_5.1.1" ]; then
-            DB_URL="https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_SSU_dada2.fasta.gz"
-            DB_MD5="cab726022035241ce1f05a24dd3ef707"
-            DB_FILENAME="pr2_version_5.1.1_SSU_dada2.fasta.gz"
-        else
-            echo "Error: database method not recognized."
-            exit 1
-        fi
-
-        # Download the database if it doesn't already exist
         if [ ! -f "$DB_PATH" ]; then
-            echo "Downloading $DB_FILENAME..."
-            wget -O "$DB_PATH" "$DB_URL"
-            if [ $? -ne 0 ]; then
-                echo "Error downloading $DB_FILENAME."
-                exit 1
-            fi
+            echo "Downloading {params.filename}..."
+            rm -f "$TMP_PATH"
+            wget --quiet -O "$TMP_PATH" "{params.url}"
+            test -s "$TMP_PATH"
+            mv "$TMP_PATH" "$DB_PATH"
         fi
 
-        # Check MD5
         echo "Checking MD5 checksum..."
         MD5_CALC=$(md5sum "$DB_PATH" | awk '{{print $1}}')
-        if [ "$MD5_CALC" != "$DB_MD5" ]; then
-            echo "MD5 mismatch for $DB_FILENAME"
-            echo "Expected: $DB_MD5"
-
+        if [ "$MD5_CALC" != "{params.md5}" ]; then
+            echo "MD5 mismatch for {params.filename}"
+            echo "Expected: {params.md5}"
             echo "Got:      $MD5_CALC"
             exit 1
         else
-            echo "MD5 verified for $DB_FILENAME"
+            echo "MD5 verified for {params.filename}"
         fi
         ) > {log} 2>&1
         """
@@ -773,7 +827,9 @@ rule reporter:
         summaries = expand(f"{output_dir}" + "/{run}/intermediate/cutadapt/cutadapt_summary.log",
                            run=runs),
         track_report = f"{output_dir}/results/read-count-tracking.tsv",
-        ASV = f"{output_dir}/results/ASVs.fa"
+        ASV = f"{output_dir}/results/ASVs.fa",
+        error_models = expand(f"{output_dir}" + "/{run}/intermediate/dada2_error_learning/model_selection.tsv",
+                              run=runs)
     output:
         report = f"{output_dir}/results/final_report.txt",
     log:
@@ -781,12 +837,14 @@ rule reporter:
     params:
         forward_p = forward_primer,
         reverse_p = reverse_primer,
-        start = start_time,
+        start = analysis_start,
         workflow_file = workflow.snakefile,
         version = version,
         taxonomy_method = assign_taxonomy_method,
         reporter=SCRIPT_PATHS['reporter'],
         dada2_params = dada2_params,
+        loess_model = config.get("loess_model", "auto"),
+        runs = runs,
         use_figaro = USE_FIGARO,
         output_dir = output_dir    
     script:
