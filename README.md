@@ -235,6 +235,14 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --as
 
 This is useful when you want to retain only ASVs within a user-defined sequence-length interval after chimera removal.
 
+Resource profiles:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --resource-profile balanced -c 8
+```
+
+Available profiles are `safe`, `balanced`, and `aggressive`.
+They increase CPU usage on preprocessing and QC steps while keeping DADA2-related steps more conservative.
+
 Store databases in a stable shared directory:
 ```sh
 ampwrap short \

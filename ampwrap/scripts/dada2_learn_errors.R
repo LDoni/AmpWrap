@@ -5,10 +5,32 @@ input_dir <- args[1]
 output_dir <- args[2]
 loess_model_arg <- ifelse(length(args) >= 3, args[3], "auto")
 bigdata_mode <- tolower(ifelse(length(args) >= 4, args[4], "no")) == "yes"
+thread_count_arg <- ifelse(length(args) >= 5, args[5], "1")
 
 options(warn = -1)
 suppressPackageStartupMessages(library(dada2))
 base_loess_errfun <- get("loessErrfun", asNamespace("dada2"))
+
+configure_parallelism <- function(value) {
+    threads <- suppressWarnings(as.integer(value))
+    if (is.na(threads) || threads < 1) {
+        threads <- 1L
+    }
+    Sys.setenv(
+        RCPP_PARALLEL_NUM_THREADS = threads,
+        OMP_NUM_THREADS = threads,
+        OPENBLAS_NUM_THREADS = threads,
+        MKL_NUM_THREADS = threads,
+        VECLIB_MAXIMUM_THREADS = threads,
+        BLIS_NUM_THREADS = threads
+    )
+    if (requireNamespace("RcppParallel", quietly = TRUE)) {
+        RcppParallel::setThreadOptions(numThreads = threads)
+    }
+    if (threads <= 1L) FALSE else TRUE
+}
+
+dada2_multithread <- configure_parallelism(thread_count_arg)
 
 QUAL_SCAN_FILES <- 2
 QUAL_SCAN_READS <- 4000
@@ -165,7 +187,7 @@ learn_model <- function(files, model_key, nbases = NULL, randomize = TRUE) {
     model_def <- MODEL_DEFS[[model_key]]
     learn_args <- list(
         fls = files,
-        multithread = TRUE,
+        multithread = dada2_multithread,
         randomize = randomize,
         verbose = FALSE
     )
@@ -193,7 +215,7 @@ score_model <- function(trans, err_out) {
 
 score_validation <- function(validation_files, err_out) {
     drps <- lapply(validation_files, derepFastq)
-    dds <- dada(drps, err = err_out, selfConsist = FALSE, multithread = TRUE, verbose = FALSE)
+    dds <- dada(drps, err = err_out, selfConsist = FALSE, multithread = dada2_multithread, verbose = FALSE)
     detail <- getErrors(dds, detailed = TRUE)
     score_model(detail$trans, err_out)
 }

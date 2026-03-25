@@ -5,10 +5,30 @@ figaro_params <- args[3]
 user_params <- args[4]
 trim_left_arg <- if (length(args) >= 5) args[5] else ""
 trim_right_arg <- if (length(args) >= 6) args[6] else ""
+thread_count_arg <- if (length(args) >= 7) args[7] else "1"
 
 options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 suppressPackageStartupMessages(library(jsonlite))
+
+configure_parallelism <- function(value) {
+  threads <- suppressWarnings(as.integer(value))
+  if (is.na(threads) || threads < 1) {
+    threads <- 1L
+  }
+  Sys.setenv(
+    RCPP_PARALLEL_NUM_THREADS = threads,
+    OMP_NUM_THREADS = threads,
+    OPENBLAS_NUM_THREADS = threads,
+    MKL_NUM_THREADS = threads,
+    VECLIB_MAXIMUM_THREADS = threads,
+    BLIS_NUM_THREADS = threads
+  )
+  if (requireNamespace("RcppParallel", quietly = TRUE)) {
+    RcppParallel::setThreadOptions(numThreads = threads)
+  }
+  if (threads <= 1L) FALSE else TRUE
+}
 
 parse_pair_arg <- function(value, default = c(0, 0)) {
   if (is.null(value) || value == "" || value == "None" || value == "NA") {
@@ -54,6 +74,7 @@ truncLen <- as.vector(truncLen)
 maxEE <- as.vector(maxEE)
 trimLeft <- parse_pair_arg(trim_left_arg)
 trimRight <- parse_pair_arg(trim_right_arg)
+dada2_multithread <- configure_parallelism(thread_count_arg)
 
 # File list
 fwd <- list.files(input_dir, pattern = "_trimmed_R1.fq.gz", full.names = TRUE)
@@ -73,7 +94,7 @@ out <- filterAndTrim(
   trimLeft = trimLeft,
   trimRight = trimRight,
   maxEE = maxEE,
-  multithread = TRUE
+  multithread = dada2_multithread
 )
 
 # Save summary

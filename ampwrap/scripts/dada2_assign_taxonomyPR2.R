@@ -4,17 +4,39 @@ args <- commandArgs(trailingOnly = TRUE)
 input <- args[1]
 silva_db <- args[2]
 output_dir <- args[3]
+thread_count_arg <- if (length(args) >= 4) args[4] else "1"
 options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 suppressPackageStartupMessages(library(biomformat))
 suppressPackageStartupMessages(library(phyloseq))
 suppressPackageStartupMessages(library(Biostrings))
 
+configure_parallelism <- function(value) {
+  threads <- suppressWarnings(as.integer(value))
+  if (is.na(threads) || threads < 1) {
+    threads <- 1L
+  }
+  Sys.setenv(
+    RCPP_PARALLEL_NUM_THREADS = threads,
+    OMP_NUM_THREADS = threads,
+    OPENBLAS_NUM_THREADS = threads,
+    MKL_NUM_THREADS = threads,
+    VECLIB_MAXIMUM_THREADS = threads,
+    BLIS_NUM_THREADS = threads
+  )
+  if (requireNamespace("RcppParallel", quietly = TRUE)) {
+    RcppParallel::setThreadOptions(numThreads = threads)
+  }
+  if (threads <= 1L) FALSE else TRUE
+}
+
+dada2_multithread <- configure_parallelism(thread_count_arg)
+
 #load chimeres
 seqtab_nochim <- readRDS(input)
 
 # Assign taxonomy
-taxa <- assignTaxonomy(seqtab_nochim, silva_db, multithread = TRUE)
+taxa <- assignTaxonomy(seqtab_nochim, silva_db, multithread = dada2_multithread)
 
 asv_seqs <- colnames(seqtab_nochim)
 

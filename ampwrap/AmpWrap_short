@@ -186,6 +186,15 @@ def parse_trim_pair(value, option_name):
     return tuple(parse_nonnegative_int(part, option_name) for part in parts)
 
 
+def parse_resource_profile(value):
+    lowered = str(value).strip().lower()
+    if lowered not in {"safe", "balanced", "aggressive"}:
+        raise argparse.ArgumentTypeError(
+            "--resource-profile must be one of: safe, balanced, aggressive"
+        )
+    return lowered
+
+
 def default_db_dir():
     env_value = os.environ.get("AMPWRAP_DB_DIR")
     if env_value:
@@ -269,7 +278,7 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
 metainfo, extension, figaro_name, trim_primers_dada2, disable_discard_untrimmed, dry_run_tune,
 dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
 asv_length_tolerance=None, asv_length_min=None, asv_length_max=None, bigdata_mode=False,
-dada2_trim_left=None, dada2_trim_right=None):
+dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced"):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -294,7 +303,8 @@ dada2_trim_left=None, dada2_trim_right=None):
         "disable_discard_untrimmed": disable_discard_untrimmed,
         "dry_run_tune": dry_run_tune,
         "threads": threads if threads not in (None, "all") else os.cpu_count(),
-        "bigdata_mode": bool(bigdata_mode)
+        "bigdata_mode": bool(bigdata_mode),
+        "resource_profile": resource_profile,
     }
     if dada2_trim_left is not None:
         config["dada2_trim_left"] = ",".join(str(v) for v in dada2_trim_left)
@@ -486,6 +496,12 @@ def main():
 
     execution = parser.add_argument_group("execution")
     execution.add_argument("-c", "--cores", type=parse_cores, default="all", help="Limit Snakemake cores")
+    execution.add_argument(
+        "--resource-profile",
+        type=parse_resource_profile,
+        default="balanced",
+        help="Per-step CPU profile: safe, balanced, or aggressive.",
+    )
 
     args = parser.parse_args()
 
@@ -666,7 +682,8 @@ def main():
                 asv_length_max=args.asv_length_max,
                 bigdata_mode=args.bigdata,
                 dada2_trim_left=dada2_trim_left,
-                dada2_trim_right=dada2_trim_right)
+                dada2_trim_right=dada2_trim_right,
+                resource_profile=args.resource_profile)
     run_snakemake(config_path, is_quiet, cores=cores)
 
 

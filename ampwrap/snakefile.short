@@ -18,6 +18,7 @@ reverse_primer = config["reverse_primer"]
 amplicon_length = config["amplicon_length"]
 files = config["sample"]
 threads = config.get("threads",os.cpu_count())
+resource_profile = config.get("resource_profile", "balanced")
 figaroname = "fvieira"
 discard_untrimmed = "--discard-untrimmed"
 disable_discard_untrimmed = config["disable_discard_untrimmed"]
@@ -30,6 +31,63 @@ dada2_trim_left = config.get("dada2_trim_left", "")
 dada2_trim_right = config.get("dada2_trim_right", "")
 USE_FIGARO = (config.get("dada2_source", "figaro") == "figaro")
 max_reads_per_sample = config.get("max_reads_per_sample", 0)
+
+RESOURCE_CAPS = {
+    "safe": {
+        "input_symlink": 2,
+        "cutadapt": 4,
+        "fastqc": 4,
+        "multiqc": 1,
+        "figaro": 4,
+        "dada2_filter": 2,
+        "dada2_error_learning": 1,
+        "dada2_infer_asvs": 1,
+        "dada2_asv_table": 1,
+        "dada2_merge_multiple_runs": 1,
+        "dada2_remove_chimeras": 1,
+        "dada2_assign_taxonomy": 1,
+        "track_reads": 1,
+        "reporter": 1,
+    },
+    "balanced": {
+        "input_symlink": 3,
+        "cutadapt": 6,
+        "fastqc": 8,
+        "multiqc": 2,
+        "figaro": 4,
+        "dada2_filter": 2,
+        "dada2_error_learning": 1,
+        "dada2_infer_asvs": 1,
+        "dada2_asv_table": 1,
+        "dada2_merge_multiple_runs": 1,
+        "dada2_remove_chimeras": 1,
+        "dada2_assign_taxonomy": 2,
+        "track_reads": 1,
+        "reporter": 1,
+    },
+    "aggressive": {
+        "input_symlink": 4,
+        "cutadapt": 8,
+        "fastqc": 12,
+        "multiqc": 2,
+        "figaro": 6,
+        "dada2_filter": 3,
+        "dada2_error_learning": 2,
+        "dada2_infer_asvs": 2,
+        "dada2_asv_table": 1,
+        "dada2_merge_multiple_runs": 1,
+        "dada2_remove_chimeras": 2,
+        "dada2_assign_taxonomy": 2,
+        "track_reads": 1,
+        "reporter": 1,
+    },
+}
+
+if resource_profile not in RESOURCE_CAPS:
+    raise ValueError(f"Unknown resource profile: {resource_profile}")
+
+def rule_threads(rule_name):
+    return max(1, min(int(threads), int(RESOURCE_CAPS[resource_profile][rule_name])))
 
 run_dirs = config.get("run_dirs","")
 if run_dirs != "":
@@ -322,6 +380,7 @@ rule input_symlink:
     input: lambda wildcards: getOriginalReadFilesDict(wildcards)[f"r{wildcards.index}"]
     output: f"{output_dir}/{{run}}/figaro_inp/{{sample}}_R{{index,[^\._]+}}.{file_extension}"
     log: f"{logs_dir}/input_symlink/{{run}}/{{sample}}_R{{index}}.log"
+    threads: rule_threads("input_symlink")
     params:
         max_reads=max_reads_per_sample,
         sample_seed=lambda wildcards: stable_seed(wildcards.sample, wildcards.run),
@@ -333,7 +392,7 @@ rule input_symlink:
         SRC=$(realpath {input})
         TARGET=$(realpath -m {output})
 
-        TOTAL_READS=$(seqkit stats -T "$SRC" | awk 'NR==2 {{print $4}}')
+        TOTAL_READS=$(seqkit stats -j {threads} -T "$SRC" | awk 'NR==2 {{print $4}}')
         if [ -z "$TOTAL_READS" ]; then
             echo "Unable to determine read count for $SRC" > {log}
             exit 1
@@ -371,7 +430,7 @@ rule input_symlink:
             else
                 PROPORTION=$(awk -v max="$SELECTED_CAP" -v total="$TOTAL_READS" 'BEGIN {{printf "%.12f", max/total}}')
                 seqkit sample -2 -p "$PROPORTION" -s {params.sample_seed} "$SRC" -o "$TARGET" > /dev/null
-                KEPT_READS=$(seqkit stats -T "$TARGET" | awk 'NR==2 {{print $4}}')
+                KEPT_READS=$(seqkit stats -j {threads} -T "$TARGET" | awk 'NR==2 {{print $4}}')
                 {{
                     echo "mode=downsample-auto"
                     echo "source=$SRC"
@@ -398,7 +457,7 @@ rule input_symlink:
             else
                 PROPORTION=$(awk -v max="$MAX_READS_VALUE" -v total="$TOTAL_READS" 'BEGIN {{printf "%.12f", max/total}}')
                 seqkit sample -2 -p "$PROPORTION" -s {params.sample_seed} "$SRC" -o "$TARGET" > /dev/null
-                KEPT_READS=$(seqkit stats -T "$TARGET" | awk 'NR==2 {{print $4}}')
+                KEPT_READS=$(seqkit stats -j {threads} -T "$TARGET" | awk 'NR==2 {{print $4}}')
                 {{
                     echo "mode=downsample"
                     echo "source=$SRC"
@@ -428,6 +487,7 @@ rule cutadapt:
          r2_trimmed = "{output_dir}/{run}/intermediate/cutadapt/{sample}_trimmed_R2.fq.gz"
      log:
          "{output_dir}/{run}/intermediate/cutadapt/{sample}_cutadapt.log"
+     threads: rule_threads("cutadapt")
      params:
          forward_primer = forward_primer,
          reverse_primer = reverse_primer,
@@ -443,7 +503,7 @@ rule cutadapt:
          ln -sf "$(realpath {input.r2})" {output.r2_trimmed}
          printf "mode=bypass_for_dada2_trim\\nsource_r1=%s\\nsource_r2=%s\\n" "{input.r1}" "{input.r2}" > {log}
          else
-         cutadapt -g "^{params.forward_primer}" -G "^{params.reverse_primer}" {discard_untrimmed} \
+         cutadapt -j {threads} -g "^{params.forward_primer}" -G "^{params.reverse_primer}" {discard_untrimmed} \
                   -o {output.r1_trimmed} -p {output.r2_trimmed} \
                   {input.r1} {input.r2} > {log} 2>&1
          fi
@@ -455,7 +515,7 @@ rule fastqc_initial:
          f"{output_dir}/{{run}}/QC/raw_qc_initial/{{sample}}_R{{index,[^\._]}}_fastqc.html"
      log:
          f"{logs_dir}/fastqc_initial/{{run}}/{{sample}}_R{{index}}.log"
-     threads: threads
+     threads: rule_threads("fastqc")
      shell:
          """
          mkdir -p {output_dir}/{wildcards.run}/QC/raw_qc_initial
@@ -474,7 +534,7 @@ rule multiqc_initial:
         ]
     output: f"{output_dir}/{{run}}/QC/raw_qc_initial/multiqc_report.html"
     log: f"{logs_dir}/multiqc_initial/{{run}}.log"
-    threads: threads
+    threads: rule_threads("multiqc")
     shell:
         """
         mkdir -p $(dirname {log})
@@ -545,7 +605,7 @@ rule fastqc_post_cutadapt:
     input: f"{output_dir}/{{run}}/intermediate/cutadapt/{{sample}}_trimmed_R{{index}}.fq.gz"
     output: f"{output_dir}/{{run}}/QC/raw_qc_post_cutadapt/{{sample}}_trimmed_R{{index,[^\._]}}_fastqc.html"
     log: f"{logs_dir}/fastqc_post_cutadapt/{{run}}/{{sample}}_R{{index}}.log"
-    threads: 15
+    threads: rule_threads("fastqc")
     shell:
         """
         mkdir -p $(dirname {output})
@@ -564,7 +624,7 @@ rule multiqc_final:
         ]
     output: f"{output_dir}/{{run}}/QC/raw_qc_post_cutadapt/multiqc_report.html"
     log: f"{logs_dir}/multiqc_final/{{run}}.log"
-    threads: threads
+    threads: rule_threads("multiqc")
     shell:
         """
         mkdir -p $(dirname {log})
@@ -581,7 +641,7 @@ rule figaro:
         trimParameters = f"{output_dir}/{{run}}/intermediate/figaro/trimParameters.json"
     log:
         f"{logs_dir}/figaro/{{run}}.log"
-    threads: threads
+    threads: rule_threads("figaro")
     params:
         amplen = amplicon_length,
         forward_primer_length = forward_primer_length,
@@ -741,6 +801,7 @@ rule dada2_filter:
         filter_summary=f"{output_dir}/{{run}}/intermediate/dada2_filtered/filter_summary.tsv",
     log:
         f"{logs_dir}/dada2_filter/{{run}}.log"
+    threads: rule_threads("dada2_filter")
     params:
         filter_script = SCRIPT_PATHS['dada2_filter'],
         dada2_params  = config.get("dada2_params",""),
@@ -755,7 +816,7 @@ rule dada2_filter:
         Rscript {params.filter_script} \
           {output_dir}/{wildcards.run}/intermediate/cutadapt \
           {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
-          {params.figaro_arg} "{params.dada2_params}" "{params.trim_left}" "{params.trim_right}" "{params.upstream_trim}" > {log} 2>&1
+          {params.figaro_arg} "{params.dada2_params}" "{params.trim_left}" "{params.trim_right}" "{threads}" > {log} 2>&1
         touch {output.checkout}
         """
 
@@ -768,6 +829,7 @@ rule dada2_error_learning:
         metadata=f"{output_dir}/{{run}}/intermediate/dada2_error_learning/model_selection.tsv"
     log:
         f"{logs_dir}/dada2_error_learning/{{run}}.log"
+    threads: rule_threads("dada2_error_learning")
     params:
         learn_script = SCRIPT_PATHS['dada2_learn_errors'],
         loess_model = config.get("loess_model", "auto"),
@@ -780,7 +842,8 @@ rule dada2_error_learning:
         {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
         {output_dir}/{wildcards.run}/intermediate/dada2_error_learning \
         {params.loess_model} \
-        {params.bigdata_mode} > {log} 2>&1
+        {params.bigdata_mode} \
+        {threads} > {log} 2>&1
         """
 
 rule dada2_infer_asvs:
@@ -793,12 +856,13 @@ rule dada2_infer_asvs:
         rev=f"{output_dir}/{{run}}/intermediate/dada_rev.rds"
     log:
         f"{logs_dir}/dada2_infer_asvs/{{run}}.log"
+    threads: rule_threads("dada2_infer_asvs")
     params:
         infer_script = SCRIPT_PATHS['dada2_infer_asvs_bigdata'] if config.get("bigdata_mode", False) else SCRIPT_PATHS['dada2_infer_asvs']
     shell:
         """
         mkdir -p $(dirname {log})
-        Rscript {params.infer_script} {output_dir}/{wildcards.run}/intermediate/dada2_filtered {input.err_fwd} {input.err_rev} {output.merged_asvs} > {log} 2>&1
+        Rscript {params.infer_script} {output_dir}/{wildcards.run}/intermediate/dada2_filtered {input.err_fwd} {input.err_rev} {output.merged_asvs} {threads} > {log} 2>&1
         """
 
 rule dada2_asv_table:
@@ -808,6 +872,7 @@ rule dada2_asv_table:
         asv_table = f"{output_dir}/{{run}}/intermediate/asv_table.rds"
     log:
         f"{logs_dir}/dada2_asv_table/{{run}}.log"
+    threads: rule_threads("dada2_asv_table")
     params:
         asv_table_script = SCRIPT_PATHS['dada2_asv_table']
     shell:
@@ -823,6 +888,7 @@ rule dada2_merge_multiple_runs:
         merged_seqtab = f"{output_dir}/all_runs/merged_asv_table.rds"
     log:
         f"{logs_dir}/dada2_merge_multiple_runs/all_runs.log"
+    threads: rule_threads("dada2_merge_multiple_runs")
     params:
         merge_script = SCRIPT_PATHS['dada2_merge_multiple_runs']
     shell:
@@ -839,6 +905,7 @@ rule dada2_remove_chimeras:
         no_chimera_asvs = f"{output_dir}/{chimerae_dir}/no_chimera_asvs.rds"
     log:
         f"{logs_dir}/dada2_remove_chimeras/{chimerae_dir}.log"
+    threads: rule_threads("dada2_remove_chimeras")
     params:
         chimera_script = SCRIPT_PATHS['dada2_remove_chimeras'],
         asv_length_min = config.get("asv_length_min", ""),
@@ -846,7 +913,7 @@ rule dada2_remove_chimeras:
     shell:
         """
         mkdir -p $(dirname {log})
-        Rscript {params.chimera_script} {input} {output.no_chimera_asvs} {params.asv_length_min} {params.asv_length_max} > {log} 2>&1
+        Rscript {params.chimera_script} {input} {output.no_chimera_asvs} {params.asv_length_min} {params.asv_length_max} {threads} > {log} 2>&1
         """
 
 rule download_dada2_db:
@@ -928,6 +995,7 @@ rule dada2_assign_taxonomy:
         taxonomy=f"{output_dir}/results/ASVs_taxonomy.tsv",
     log:
         f"{logs_dir}/dada2_assign_taxonomy/{assign_taxonomy_method}.log"
+    threads: rule_threads("dada2_assign_taxonomy")
     params:
         method=assign_taxonomy_method,
         tax_scriptdada16S=SCRIPT_PATHS['dada2_assign_taxonomy16S'],
@@ -939,13 +1007,13 @@ rule dada2_assign_taxonomy:
         mkdir -p "{output_dir}/results"
         mkdir -p $(dirname {log})
         if [[ {params.method} == "decipher_silva138" || {params.method} == "decipher_gtdb226" || {params.method} == "decipher_rdp18" ]]; then
-            Rscript {params.tax_script_dechipher} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
+            Rscript {params.tax_script_dechipher} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} > {log} 2>&1
         elif [[ {params.method} == "dada2_silva_genus138" || {params.method} == "dada2_RDP_genus19" || {params.method} == "dada2_GG2_genus09" || {params.method} == "dada2_RefSeq_RDPv16" || {params.method} == "dada2_GTDB_r202" ]]; then
-             Rscript {params.tax_scriptdada16S} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
+             Rscript {params.tax_scriptdada16S} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} > {log} 2>&1
         elif [[ {params.method} == "dada2_pr2_5.1.1" ]]; then
-            Rscript {params.tax_scriptdadaPr2} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
+            Rscript {params.tax_scriptdadaPr2} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} > {log} 2>&1
         elif [[ {params.method} == "dada2_18S_silva132" ]]; then
-            Rscript {params.tax_scriptdada18S} {input.no_chimera_asvs} {input.db} {output_dir}/results > {log} 2>&1
+            Rscript {params.tax_scriptdada18S} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} > {log} 2>&1
         else
             echo "Error: method not valid."
             echo " try: ampwrap short --db-info"
@@ -971,6 +1039,7 @@ rule track_reads:
         checkout=f"{output_dir}/results/read-count-tracking.tsv"
     log:
         f"{logs_dir}/track_reads/track_reads.log"
+    threads: rule_threads("track_reads")
     params:
         track_script=SCRIPT_PATHS['track_reads'],
     shell:
@@ -992,6 +1061,7 @@ rule reporter:
         report = f"{output_dir}/results/final_report.txt",
     log:
         f"{logs_dir}/reporter/final_report.log"
+    threads: rule_threads("reporter")
     params:
         forward_p = forward_primer,
         reverse_p = reverse_primer,
