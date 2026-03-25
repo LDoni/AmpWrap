@@ -39,12 +39,10 @@ def format_count_percent(count, total):
 
 def build_denoising_table(cutadapt_df, dada2_df):
     df = pd.merge(cutadapt_df, dada2_df, on="sample", how="inner")
-    df["reads_retained_pct"] = df["reads_retained"].apply(parse_percent)
-    df["raw_reads"] = df.apply(
-        lambda row: int(round(row["reads.in"] / (row["reads_retained_pct"] / 100.0)))
-        if row["reads_retained_pct"] > 0 else int(row["reads.in"]),
-        axis=1,
-    )
+    if df.empty:
+        raise ValueError("No overlapping sample names between cutadapt and DADA2 tracking tables")
+    df["reads_retained"] = pd.to_numeric(df["reads_retained"])
+    df["raw_reads"] = df["reads_retained"].astype(int)
 
     report_df = pd.DataFrame({
         "sample": df["sample"],
@@ -106,8 +104,9 @@ for run_dir in run_dirs:
     cutadapt_log = cutadapt_log_files[0]
     dada2_file = dada2_files[0]
 
-    df1 = pd.read_table(cutadapt_log, sep=r"\s+")
+    df1 = pd.read_table(cutadapt_log, sep="\t")
     df2 = pd.read_table(dada2_file).loc[:, ["sample", "reads.in", "reads.out", "dadaF", "dadaR", "merged", "nonchim"]]
+    df2["sample"] = df2["sample"].str.replace(r"_R1_filtered\.fq\.gz$", "", regex=True)
     df_multi = build_denoising_table(df1, df2)
 
     

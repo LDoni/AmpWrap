@@ -25,7 +25,9 @@ if disable_discard_untrimmed: discard_untrimmed = ""
 dada2_params = config["dada2_params"]
 param_source = config["dada2_source"]
 dry_run_tune = config.get("dry_run_tune", False)
-cutadapt_trim_by_length = config.get("cutadapt_trim_by_length", False)
+trim_primers_dada2 = config.get("trim_primers_dada2", False)
+dada2_trim_left = config.get("dada2_trim_left", "")
+dada2_trim_right = config.get("dada2_trim_right", "")
 USE_FIGARO = (config.get("dada2_source", "figaro") == "figaro")
 max_reads_per_sample = config.get("max_reads_per_sample", 0)
 
@@ -429,17 +431,17 @@ rule cutadapt:
      params:
          forward_primer = forward_primer,
          reverse_primer = reverse_primer,
-         cutadapt_trim_by_length = cutadapt_trim_by_length,
+         trim_primers_dada2 = trim_primers_dada2,
          forward_primer_length = forward_primer_length,
          reverse_primer_length = reverse_primer_length
      shell:
          """
          mkdir -p {output_dir}/{wildcards.run}/intermediate/cutadapt
 
-         if [ "{params.cutadapt_trim_by_length}" = "True" ]; then
-         cutadapt -u "{params.forward_primer_length}" -U "{params.reverse_primer_length}" \
-                  -o {output.r1_trimmed} -p {output.r2_trimmed} \
-                  {input.r1} {input.r2} > {log} 2>&1
+         if [ "{params.trim_primers_dada2}" = "True" ]; then
+         ln -sf "$(realpath {input.r1})" {output.r1_trimmed}
+         ln -sf "$(realpath {input.r2})" {output.r2_trimmed}
+         printf "mode=bypass_for_dada2_trim\\nsource_r1=%s\\nsource_r2=%s\\n" "{input.r1}" "{input.r2}" > {log}
          else
          cutadapt -g "^{params.forward_primer}" -G "^{params.reverse_primer}" {discard_untrimmed} \
                   -o {output.r1_trimmed} -p {output.r2_trimmed} \
@@ -491,26 +493,51 @@ rule combine_cutadapt_logs:
     log:
         f"{logs_dir}/combine_cutadapt_logs/{{run}}.log"
     run:
-        shell(f"""
-            mkdir -p $(dirname {{log}})
-            (
-                cat {{input}} > {{output.merged}}
+        import os
+        import re
+        import shutil
+        import subprocess
 
-                echo -e "sample reads_retained bps_retained" > {{output.summary}}
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        qc_dir = f"{output_dir}/{wildcards.run}/QC/raw_qc_post_cutadapt"
+        os.makedirs(qc_dir, exist_ok=True)
 
-                for f in {{input}}; do
-                    sample=$(basename $f | cut -d'_' -f1)
-                    reads=$(grep "Pairs written (passing filters):" $f | awk '{{{{gsub(/\\(|\\)/,"",$6); print $6}}}}')
-                    bps=$(grep "Total written (filtered):" $f | awk '{{{{gsub(/\\(|\\)/,"",$6); print $6}}}}')
-                    echo -e "$sample\t$reads\t$bps" >> {{output.summary}}
-                done
+        def seqkit_stats(path):
+            result = subprocess.run(
+                ["seqkit", "stats", "-T", path],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            lines = [line for line in result.stdout.strip().splitlines() if line.strip()]
+            fields = lines[-1].split("\t")
+            return fields[3], fields[4]
 
-                cat {{output.summary}}
+        with open(output.merged, "w") as merged_out, open(output.summary, "w") as summary_out, open(log[0], "w") as log_out:
+            summary_out.write("sample\treads_retained\tbps_retained\n")
 
-                mkdir -p {{output_dir}}/{{wildcards.run}}/QC/raw_qc_post_cutadapt/
-                cp {{input}} {{output_dir}}/{{wildcards.run}}/QC/raw_qc_post_cutadapt/
-            ) > {{log}} 2>&1
-        """)
+            for path in input:
+                with open(path) as fh:
+                    content = fh.read()
+                merged_out.write(content)
+                if not content.endswith("\n"):
+                    merged_out.write("\n")
+
+                sample = os.path.basename(path).replace("_cutadapt.log", "")
+                if "mode=bypass_for_dada2_trim" in content:
+                    trimmed_r1 = f"{output_dir}/{wildcards.run}/intermediate/cutadapt/{sample}_trimmed_R1.fq.gz"
+                    reads, bps = seqkit_stats(trimmed_r1)
+                else:
+                    reads_match = re.search(r"Pairs written \\(passing filters\\):\\s+([0-9,]+)", content)
+                    bps_match = re.search(r"Total written \\(filtered\\):\\s+([0-9,]+) bp", content)
+                    if not reads_match or not bps_match:
+                        raise ValueError(f"Could not parse cutadapt log: {path}")
+                    reads = reads_match.group(1).replace(",", "")
+                    bps = bps_match.group(1).replace(",", "")
+
+                summary_out.write(f"{sample}\t{reads}\t{bps}\n")
+                shutil.copy2(path, os.path.join(qc_dir, os.path.basename(path)))
+                log_out.write(f"{sample}\t{reads}\t{bps}\n")
 
 
 
@@ -717,7 +744,10 @@ rule dada2_filter:
     params:
         filter_script = SCRIPT_PATHS['dada2_filter'],
         dada2_params  = config.get("dada2_params",""),
-        figaro_arg    = figaro_arg
+        figaro_arg    = figaro_arg,
+        trim_left     = dada2_trim_left,
+        trim_right    = dada2_trim_right,
+        upstream_trim = "" if trim_primers_dada2 else f"{forward_primer_length},{reverse_primer_length}"
     shell:
         r"""
         mkdir -p {output_dir}/{wildcards.run}/intermediate/dada2_filtered
@@ -725,7 +755,7 @@ rule dada2_filter:
         Rscript {params.filter_script} \
           {output_dir}/{wildcards.run}/intermediate/cutadapt \
           {output_dir}/{wildcards.run}/intermediate/dada2_filtered \
-          {params.figaro_arg} "{params.dada2_params}" > {log} 2>&1
+          {params.figaro_arg} "{params.dada2_params}" "{params.trim_left}" "{params.trim_right}" "{params.upstream_trim}" > {log} 2>&1
         touch {output.checkout}
         """
 

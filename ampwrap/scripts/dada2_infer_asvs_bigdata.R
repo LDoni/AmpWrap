@@ -58,8 +58,7 @@ for (sam in sample_names) {
   )
 }
 
-seqtab <- makeSequenceTable(merged)
-saveRDS(seqtab, output)
+saveRDS(merged, output)
 saveRDS(dada_fwd, file.path(dirname(output), "dada_fwd.rds"))
 saveRDS(dada_rev, file.path(dirname(output), "dada_rev.rds"))
 

@@ -156,6 +156,16 @@ def parse_positive_int(value, option_name):
     return parsed
 
 
+def parse_nonnegative_int(value, option_name):
+    try:
+        parsed = int(str(value).strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{option_name} must be a non-negative integer") from exc
+    if parsed < 0:
+        raise argparse.ArgumentTypeError(f"{option_name} must be >= 0")
+    return parsed
+
+
 def parse_max_reads(value):
     lowered = str(value).strip().lower()
     if lowered == "auto":
@@ -165,6 +175,15 @@ def parse_max_reads(value):
 
 def parse_asv_length_tolerance(value):
     return parse_positive_int(value, "--asv-length-tolerance")
+
+
+def parse_trim_pair(value, option_name):
+    parts = [p.strip() for p in str(value).split(",")]
+    if len(parts) != 2:
+        raise argparse.ArgumentTypeError(
+            f"{option_name} must contain exactly two comma-separated integers, e.g. 19,20"
+        )
+    return tuple(parse_nonnegative_int(part, option_name) for part in parts)
 
 
 def default_db_dir():
@@ -247,9 +266,10 @@ def validate_paired_samples(parsed_files, input_dir):
 
 
 def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice,
-metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untrimmed, dry_run_tune,
+metainfo, extension, figaro_name, trim_primers_dada2, disable_discard_untrimmed, dry_run_tune,
 dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
-asv_length_tolerance=None, bigdata_mode=False):
+asv_length_tolerance=None, asv_length_min=None, asv_length_max=None, bigdata_mode=False,
+dada2_trim_left=None, dada2_trim_right=None):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -270,13 +290,21 @@ asv_length_tolerance=None, bigdata_mode=False):
         "analysis_start": datetime.datetime.now().isoformat(timespec="seconds"),
         "dada2_source": "user" if dada2_params else "figaro",
         "max_reads_per_sample": max_reads_per_sample if max_reads_per_sample else 0,
-        "cutadapt_trim_by_length": cutadapt_trim_by_length,
+        "trim_primers_dada2": bool(trim_primers_dada2),
         "disable_discard_untrimmed": disable_discard_untrimmed,
         "dry_run_tune": dry_run_tune,
         "threads": threads if threads not in (None, "all") else os.cpu_count(),
         "bigdata_mode": bool(bigdata_mode)
     }
-    if asv_length_tolerance is not None:
+    if dada2_trim_left is not None:
+        config["dada2_trim_left"] = ",".join(str(v) for v in dada2_trim_left)
+    if dada2_trim_right is not None:
+        config["dada2_trim_right"] = ",".join(str(v) for v in dada2_trim_right)
+
+    if asv_length_min is not None and asv_length_max is not None:
+        config["asv_length_min"] = int(asv_length_min)
+        config["asv_length_max"] = int(asv_length_max)
+    elif asv_length_tolerance is not None:
         config["asv_length_min"] = max(1, int(amplen) - int(asv_length_tolerance))
         config["asv_length_max"] = int(amplen) + int(asv_length_tolerance)
 
@@ -345,7 +373,7 @@ def main():
         epilog=(
             "Examples:\n"
             "  ampwrap short -i reads_dir -a FORWARD -A REVERSE -l 372\n"
-            "  ampwrap short -i run1 run2 -a FORWARD -A REVERSE -l 372 --cutadapt_trim_by_length\n"
+            "  ampwrap short -i run1 run2 -a FORWARD -A REVERSE -l 372 --trim-primers-dada2\n"
             "  ampwrap short -i reads_dir -a FORWARD -A REVERSE \\\n"
             "    --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'\n"
             "  ampwrap short -i reads_dir -a FORWARD -A REVERSE -l 372 \\\n"
@@ -394,7 +422,25 @@ def main():
             "Example: R926 - F515 = 411; pF19 - pR20 = 372"
         ),
     )
-    denoising.add_argument("--cutadapt_trim_by_length",help="Trim primers by their declared length",action="store_true",default=False)
+    denoising.add_argument(
+        "--trim-primers-dada2",
+        action="store_true",
+        help=(
+            "Trim primers during DADA2 filtering using trimLeft/trimRight.\n"
+            "Defaults to primer lengths for trimLeft and 0,0 for trimRight."
+        ),
+    )
+    denoising.add_argument(
+        "--dada2-trim-left",
+        type=lambda value: parse_trim_pair(value, "--dada2-trim-left"),
+        help="Comma-separated trimLeft values for forward and reverse reads, e.g. 19,20.",
+    )
+    denoising.add_argument(
+        "--dada2-trim-right",
+        type=lambda value: parse_trim_pair(value, "--dada2-trim-right"),
+        help="Comma-separated trimRight values for forward and reverse reads, e.g. 0,0.",
+    )
+    denoising.add_argument("--cutadapt_trim_by_length", help=argparse.SUPPRESS, action="store_true", default=False)
     denoising.add_argument("--cutadapt_disable_discard_untrimmed",help="Disable cutadapt --discard-untrimmed",action="store_true",default=False)
     denoising.add_argument(
         "--dada2_params", type=str,
@@ -427,6 +473,16 @@ def main():
             "Useful when merged ASV lengths vary unexpectedly."
         ),
     )
+    denoising.add_argument(
+        "--asv-length-min",
+        type=lambda value: parse_nonnegative_int(value, "--asv-length-min"),
+        help="Minimum ASV length to retain after chimera removal.",
+    )
+    denoising.add_argument(
+        "--asv-length-max",
+        type=lambda value: parse_nonnegative_int(value, "--asv-length-max"),
+        help="Maximum ASV length to retain after chimera removal.",
+    )
 
     execution = parser.add_argument_group("execution")
     execution.add_argument("-c", "--cores", type=parse_cores, default="all", help="Limit Snakemake cores")
@@ -448,7 +504,6 @@ def main():
     is_quiet = args.quiet
     disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
     dry_run_tune = args.dry_run_tune
-    cutadapt_trim_by_length = args.cutadapt_trim_by_length
     cores = args.cores
 
     if args.bigdata:
@@ -465,9 +520,47 @@ def main():
         sys.exit(1)
     use_custom_dada2 = bool(dada2_params)
 
+    if args.cutadapt_trim_by_length:
+        print(
+            "ERROR: --cutadapt_trim_by_length has been deprecated.\n"
+            "Use --trim-primers-dada2 to trim primers with DADA2 trimLeft/trimRight instead."
+        )
+        sys.exit(1)
+
+    trim_primers_dada2 = args.trim_primers_dada2 or args.dada2_trim_left is not None or args.dada2_trim_right is not None
+    dada2_trim_left = args.dada2_trim_left
+    dada2_trim_right = args.dada2_trim_right
+    if trim_primers_dada2:
+        if dada2_trim_left is None:
+            dada2_trim_left = (len(args.forward_primer), len(args.reverse_primer))
+        if dada2_trim_right is None:
+            dada2_trim_right = (0, 0)
+
+    if args.asv_length_tolerance is not None and (args.asv_length_min is not None or args.asv_length_max is not None):
+        print("ERROR: use either --asv-length-tolerance or --asv-length-min/--asv-length-max, not both.")
+        sys.exit(1)
+    if (args.asv_length_min is None) ^ (args.asv_length_max is None):
+        print("ERROR: --asv-length-min and --asv-length-max must be provided together.")
+        sys.exit(1)
+    if args.asv_length_min is not None and args.asv_length_min > args.asv_length_max:
+        print("ERROR: --asv-length-min cannot be greater than --asv-length-max.")
+        sys.exit(1)
+
     if not use_custom_dada2 and args.amplen is None:
         print("ERROR: -l/--amplen is required unless --dada2_params provides explicit truncLen/maxEE.")
         sys.exit(1)
+
+    if len(input_dirs) > 1 and not trim_primers_dada2:
+        print(
+            Fore.YELLOW
+            + (
+                "\nMULTIRUN NOTICE:\n"
+                "Consistent primer trimming is strongly recommended for multiple runs because ASVs are merged by final sequence.\n"
+                "Differences in DADA2 truncation can be acceptable if the amplicon still merges correctly, but inconsistent primer removal is not.\n"
+                "Recommended option: --trim-primers-dada2\n"
+            )
+            + Style.RESET_ALL
+        )
 
     # if it is dry-run,new temp directory
     temp_output_dir = None
@@ -560,7 +653,7 @@ def main():
                 metainfo=metainfo,
                 extension=extension,
                 figaro_name=figaro_name,
-                cutadapt_trim_by_length=cutadapt_trim_by_length,
+                trim_primers_dada2=trim_primers_dada2,
                 disable_discard_untrimmed=disable_discard_untrimmed,
                 dry_run_tune=dry_run_tune,
                 dada2_params=dada2_params,
@@ -569,7 +662,11 @@ def main():
                 max_reads_per_sample=args.max_reads_per_sample,
                 db_dir=args.db_dir,
                 asv_length_tolerance=args.asv_length_tolerance,
-                bigdata_mode=args.bigdata)
+                asv_length_min=args.asv_length_min,
+                asv_length_max=args.asv_length_max,
+                bigdata_mode=args.bigdata,
+                dada2_trim_left=dada2_trim_left,
+                dada2_trim_right=dada2_trim_right)
     run_snakemake(config_path, is_quiet, cores=cores)
 
 

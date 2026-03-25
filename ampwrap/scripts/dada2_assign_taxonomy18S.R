@@ -27,7 +27,6 @@ for (i in seq_along(asv_seqs)) {
 write(c(rbind(asv_headers, asv_seqs)), file.path(output_dir, "ASVs.fa"))
 asv_tab <- t(seqtab_nochim)
 row.names(asv_tab) <- sub(">", "", asv_headers)
-colnames(asv_tab) <- sapply(colnames(asv_tab), function(x) strsplit(x, "_")[[1]][1])
 write.table(asv_tab, file.path(output_dir, "ASVs_counts.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)
 
 # tax

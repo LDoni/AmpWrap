@@ -179,10 +179,10 @@ When `--dada2_params` is used, both `truncLen` and `maxEE` are required and `-l`
 
 Multiple Run usage:
 ```sh
-ampwrap short -i input_directory1 input_directory2 -a forward_primer -A reverse_primer -l amplicon_length --cutadapt_trim_by_length
+ampwrap short -i input_directory1 input_directory2 -a forward_primer -A reverse_primer -l amplicon_length --trim-primers-dada2
 ```
-In multiple runs mode, we recommend trimming primers using --cutadapt_trim_by_length to ensure primers are trimmed to a fixed length. 
-This helps avoid extra nucleotides in the representative sequences, which could prevent ASV merging due to variability introduced by Cutadapt
+In multiple-run mode, we recommend `--trim-primers-dada2` so primer removal is consistent across runs before ASV comparison and merging.
+ASVs are merged by final sequence, so inconsistent primer removal is more problematic than differences in DADA2 truncation when the amplicon still merges correctly.
 
 In multiple-run mode, run folders are named after the input directory basenames instead of generic `run_1`, `run_2`, etc.
 
@@ -227,6 +227,13 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --as
 ```
 
 This keeps only merged ASVs within `amplicon_length +/- tolerance`.
+
+Explicit ASV length range:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length-min 360 --asv-length-max 385
+```
+
+This is useful when you want to retain only ASVs within a user-defined sequence-length interval after chimera removal.
 
 Store databases in a stable shared directory:
 ```sh

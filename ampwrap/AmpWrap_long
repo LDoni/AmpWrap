@@ -7,8 +7,51 @@ import sys
 import yaml
 import subprocess
 import re
+class ReadableHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
+    pass
 
 
+def strip_fastq_extension(path):
+    return re.sub(r"\.(fastq|fq)(\.gz)?$", "", os.path.basename(path), flags=re.IGNORECASE)
+
+
+def parse_positive_int(value, option_name):
+    try:
+        parsed = int(str(value).strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{option_name} must be a positive integer") from exc
+    if parsed < 1:
+        raise argparse.ArgumentTypeError(f"{option_name} must be >= 1")
+    return parsed
+
+
+def parse_threads(value):
+    return parse_positive_int(value, "--threads")
+
+
+def parse_nl_min_len(value):
+    return parse_positive_int(value, "--nl-min-len")
+
+
+def parse_nl_max_len(value):
+    return parse_positive_int(value, "--nl-max-len")
+
+
+def parse_nl_min_qual(value):
+    return parse_positive_int(value, "--nl-min-qual")
+
+
+def default_long_db_dir():
+    env_value = os.environ.get("AMPWRAP_LONG_DB_DIR") or os.environ.get("AMPWRAP_DB_DIR")
+    if env_value:
+        return env_value
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_db_dir = os.path.join(script_dir, "db_s", "emu")
+    if os.path.isdir(repo_db_dir):
+        return repo_db_dir
+
+    return os.path.join(os.getcwd(), "db_s", "emu")
 
 
 def print_banner():
@@ -38,12 +81,13 @@ def print_banner():
 
 
 
-def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual, 
-                      emu_min_ab, forward_primer, reverse_primer, chimera, keep_counts):
+def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names, trimming, threads, nl_min_len, nl_max_len, nl_min_qual,
+                      emu_min_ab, forward_primer, reverse_primer, chimera, keep_counts, db_dir):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
         "tax_db": db_choice,
+        "db_dir": db_dir,
         "script": "script",
         "logs": os.path.join(output_dir, "logs"),
         "file_extension": extension,
@@ -67,7 +111,7 @@ def write_config_yaml(input_dir, output_dir, db_choice, extension, sample_names,
     return config_path
 
 
-def run_snakemake(config_path, is_quiet=False):
+def run_snakemake(config_path, cores, is_quiet=False):
     import os
     import subprocess
     import sys
@@ -84,7 +128,7 @@ def run_snakemake(config_path, is_quiet=False):
     args = [
         "snakemake",
         "--configfile", config_path,
-        "--cores", "all",
+        "--cores", str(cores),
         "--nolock",
         "--show-failed-logs",
         "--snakefile", snakefile_path
@@ -125,28 +169,76 @@ def print_db_info():
 def main():
     print_banner()
 
-    parser = argparse.ArgumentParser(description="Process raw sequencing files for downstream analysis.")
-    parser.add_argument("-i", "--input-directory",  help="Specify the input directory containing raw fq/fq.gz/fastq/fastq.gz files")
-    parser.add_argument("-o", "--output-directory", default=os.path.join(os.getcwd(), "ampwrap_long"), help="Specify the output directory (default: ./ampwrap_long_results)")
-    parser.add_argument("-tr", "--trimming", choices=["porechop", "porechop_abi"], default=None, required=False,
-					help="Specify the method to remove adapters, skip if unspecified")
-    parser.add_argument("-d", "--db-choice", choices=["rdp", "silva","emu"], default="emu", required=False,
-					help="Specify the database choice for taxonomy assignment for EMU: silva, rdp or emu_db (default: emu)")
-    parser.add_argument("-q", "--quiet",action="store_true", help="Minimal standard output")
-    parser.add_argument("-t", "--threads", default=os.cpu_count(), help="Number of threads")
-    parser.add_argument("--nl-min-len",help="Filter amplicons on a minimum read length. Default=1200", type=int, default=1200)
-    parser.add_argument("--nl-max-len",help="Filter amplicons on a maximum read length. Default=1800", type=int, default=1800)
-    parser.add_argument("--nl-min-qual",help="Filter on a minimum average read quality score. Default=10", type=int, default=10)
-    parser.add_argument("--emu-min-ab",help="Filter species with relative abundance below threshold; .01 = 1 percent. Default=0.0001", type=float, default=0.0001)
-    parser.add_argument("--cutadapt-forward",help="Forward primer sequence to trim it with cutadapt, no trimming if unspecified")
-    parser.add_argument("--cutadapt-reverse",help="Reverse primer sequence to trim it with cutadapt, no trimming if unspecified")
-    parser.add_argument("--db-info",action="store_true", help="Print available databases with version and checksum info")
-    parser.add_argument("-c", "--chimera", action="store_true", help="Specify chimera flag to remove chimeras, skip if unspecified")
-    parser.add_argument("-kc", "--keep-counts", action="store_true", help="Include estimated read counts in EMU output")
-    try: args = parser.parse_args()
-    except SystemExit:
-        parser.print_usage()
-        sys.exit(0)
+    parser = argparse.ArgumentParser(
+        description="ampwrap long: process Nanopore amplicon reads and assign taxonomy with EMU.",
+        formatter_class=ReadableHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  ampwrap long -i fastq_dir\n"
+            "  ampwrap long -i fastq_dir -tr porechop --cutadapt-forward FORWARD --cutadapt-reverse REVERSE\n"
+            "  ampwrap long -i fastq_dir -d silva --db-dir /path/to/shared_emu_db -t 8"
+        ),
+    )
+
+    required = parser.add_argument_group("required arguments")
+    required.add_argument(
+        "-i", "--input-directory",
+        help="Input directory containing Nanopore FASTQ files (.fq/.fastq, optionally .gz).",
+    )
+
+    general = parser.add_argument_group("general options")
+    general.add_argument(
+        "-o", "--output-directory",
+        default=os.path.join(os.getcwd(), "ampwrap_long"),
+        help="Output directory.",
+    )
+    general.add_argument(
+        "-d", "--db-choice",
+        choices=["rdp", "silva", "emu", "pr2"],
+        default="emu",
+        help="EMU database to use for taxonomy assignment.",
+    )
+    general.add_argument(
+        "--db-dir",
+        default=default_long_db_dir(),
+        help="Directory that stores EMU databases. Defaults to AMPWRAP_LONG_DB_DIR, AMPWRAP_DB_DIR, or local db_s/emu.",
+    )
+    general.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
+    general.add_argument("--db-info", action="store_true", help="Print available databases with version and checksum info")
+
+    processing = parser.add_argument_group("processing")
+    processing.add_argument(
+        "-tr", "--trimming",
+        choices=["porechop", "porechop_abi"],
+        default=None,
+        help="Adapter trimming method. Leave unset to skip adapter trimming.",
+    )
+    processing.add_argument(
+        "-t", "--threads",
+        type=parse_threads,
+        default=os.cpu_count(),
+        help="Maximum threads and Snakemake cores.",
+    )
+    processing.add_argument("--nl-min-len", type=parse_nl_min_len, default=1200, help="NanoFilt minimum read length.")
+    processing.add_argument("--nl-max-len", type=parse_nl_max_len, default=1800, help="NanoFilt maximum read length.")
+    processing.add_argument("--nl-min-qual", type=parse_nl_min_qual, default=10, help="NanoFilt minimum average quality.")
+    processing.add_argument(
+        "--emu-min-ab",
+        type=float,
+        default=0.0001,
+        help="EMU minimum relative abundance threshold; 0.01 means 1 percent.",
+    )
+    processing.add_argument(
+        "--cutadapt-forward",
+        help="Forward primer sequence for optional cutadapt trimming on long reads.",
+    )
+    processing.add_argument(
+        "--cutadapt-reverse",
+        help="Reverse primer sequence for optional cutadapt trimming on long reads.",
+    )
+    processing.add_argument("-c", "--chimera", action="store_true", help="Run yacrd-based chimera scrubbing after NanoFilt.")
+    processing.add_argument("-kc", "--keep-counts", action="store_true", help="Include estimated read counts in EMU output.")
+    args = parser.parse_args()
 
     if args.db_info:
         print_db_info()
@@ -175,6 +267,7 @@ def main():
     reverse_primer = args.cutadapt_reverse
     forward_primer = args.cutadapt_forward
     keep_counts = args.keep_counts
+    threads = args.threads
 
 
     # Create output directory if it doesn't exist
@@ -202,9 +295,15 @@ def main():
 
 
 
-    extension = matched_patterns[0].split('.')[-1]
-
-    sample_names = [os.path.splitext(os.path.basename(file))[0] for file in files]
+    files = sorted(files)
+    extension = ".".join(os.path.basename(files[0]).split(".")[1:])
+    sample_names = [strip_fastq_extension(file) for file in files]
+    if len(sample_names) != len(set(sample_names)):
+        print("ERROR: Duplicate sample names detected after stripping FASTQ extensions.")
+        sys.exit(1)
+    if args.nl_min_len > args.nl_max_len:
+        print("ERROR: --nl-min-len must be <= --nl-max-len.")
+        sys.exit(1)
 
 
 
@@ -215,10 +314,10 @@ def main():
 
 
     config_path = write_config_yaml(
-        input_dir, output_dir,  args.db_choice, extension, sample_names, args.trimming,  args.threads, nl_min_len, nl_max_len, nl_min_qual, 
-        emu_min_ab, reverse_primer, forward_primer, args.chimera , keep_counts
+        input_dir, output_dir, args.db_choice, extension, sample_names, args.trimming, threads, nl_min_len, nl_max_len, nl_min_qual,
+        emu_min_ab, forward_primer, reverse_primer, args.chimera, keep_counts, args.db_dir
     )
-    run_snakemake(config_path)
+    run_snakemake(config_path, threads, is_quiet=is_quiet)
 
 if __name__ == "__main__":
     main()

@@ -7,12 +7,11 @@ input_dir = config["input_dir"]
 output_dir = config["output_dir"]
 logs_dir = config.get("logs", os.path.join(output_dir, "logs"))
 sample_names = config["sample_names"]
-print(sample_names)
 file_extension = config["file_extension"]
 trimming_method = config.get("trimming_method")
 tax_db = config["tax_db"]
-db_dir = config.get("db_dir",f"db_s/emu/{tax_db}")
-rank = config.get("rank", None)
+db_root = config.get("db_dir", "db_s/emu")
+db_dir = os.path.join(db_root, tax_db)
 cpus = int(config["threads"])
 #to_cutadapt = all(p in config and config[p] not in [None, ""] for p in ["forward_primer", "reverse_primer"])
 chimera = config.get("chimera", None)
@@ -113,7 +112,7 @@ rule seqkit_stats_pre_qc:
         """
         mkdir -p $(dirname {output})
         mkdir -p $(dirname {log})
-        seqkit stats -T -j {threads} {input_dir}/*.{file_extension} > {output} 2> {log}
+        seqkit stats -T -j {cpus} {input_dir}/*.{file_extension} > {output} 2> {log}
         """
 
 rule fastqc_initial:
@@ -375,7 +374,7 @@ rule emu_abundance:
     params:
         type='map-ont',
         min_ab=emu_min_ab,
-        db=lambda wildcards: f"db_s/emu/{config['tax_db']}",
+        db=db_dir,
         keepcounts=keepcounts
     threads:
         cpus
@@ -424,8 +423,8 @@ rule reporter:
         emu_min_ab = config["emu_min_ab"],
         forward_p = config.get("forward_primer"),
         reverse_p = config.get("reverse_primer"),
-        RC_FWD = config.get("RC_FWD"),
-        RC_RVS = config.get("RC_RVS"),
+        RC_FWD = RC_FWD,
+        RC_RVS = RC_RVS,
         start = start_time,
         tax_db = config["tax_db"],
         to_cutadapt = to_cutadapt,
