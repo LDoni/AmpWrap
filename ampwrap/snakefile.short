@@ -1,6 +1,7 @@
 import os
 import glob
 import datetime
+import math
 
 version = "1.1.1"
 
@@ -32,62 +33,64 @@ dada2_trim_right = config.get("dada2_trim_right", "")
 USE_FIGARO = (config.get("dada2_source", "figaro") == "figaro")
 max_reads_per_sample = config.get("max_reads_per_sample", 0)
 
-RESOURCE_CAPS = {
+RESOURCE_POLICIES = {
     "safe": {
-        "input_symlink": 2,
-        "cutadapt": 4,
-        "fastqc": 4,
-        "multiqc": 1,
-        "figaro": 4,
-        "dada2_filter": 2,
-        "dada2_error_learning": 1,
-        "dada2_infer_asvs": 1,
-        "dada2_asv_table": 1,
-        "dada2_merge_multiple_runs": 1,
-        "dada2_remove_chimeras": 1,
-        "dada2_assign_taxonomy": 1,
-        "track_reads": 1,
-        "reporter": 1,
+        "input_symlink": {"fraction": 0.25, "min": 1, "max": 2},
+        "cutadapt": {"fraction": 0.5, "min": 2, "max": 4},
+        "fastqc": {"fraction": 0.5, "min": 2, "max": 4},
+        "multiqc": {"fraction": 0.2, "min": 1, "max": 1},
+        "figaro": {"fraction": 0.5, "min": 2, "max": 4},
+        "dada2_filter": {"fraction": 0.2, "min": 1, "max": 2},
+        "dada2_error_learning": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_infer_asvs": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_asv_table": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_merge_multiple_runs": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_remove_chimeras": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_assign_taxonomy": {"fraction": 0.2, "min": 1, "max": 1},
+        "track_reads": {"fraction": 0.1, "min": 1, "max": 1},
+        "reporter": {"fraction": 0.1, "min": 1, "max": 1},
     },
     "balanced": {
-        "input_symlink": 3,
-        "cutadapt": 6,
-        "fastqc": 8,
-        "multiqc": 2,
-        "figaro": 4,
-        "dada2_filter": 2,
-        "dada2_error_learning": 1,
-        "dada2_infer_asvs": 1,
-        "dada2_asv_table": 1,
-        "dada2_merge_multiple_runs": 1,
-        "dada2_remove_chimeras": 1,
-        "dada2_assign_taxonomy": 2,
-        "track_reads": 1,
-        "reporter": 1,
+        "input_symlink": {"fraction": 0.4, "min": 1, "max": 3},
+        "cutadapt": {"fraction": 0.75, "min": 2, "max": 6},
+        "fastqc": {"fraction": 1.0, "min": 2, "max": 8},
+        "multiqc": {"fraction": 0.25, "min": 1, "max": 2},
+        "figaro": {"fraction": 0.5, "min": 2, "max": 4},
+        "dada2_filter": {"fraction": 0.25, "min": 1, "max": 2},
+        "dada2_error_learning": {"fraction": 0.15, "min": 1, "max": 1},
+        "dada2_infer_asvs": {"fraction": 0.15, "min": 1, "max": 1},
+        "dada2_asv_table": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_merge_multiple_runs": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_remove_chimeras": {"fraction": 0.15, "min": 1, "max": 1},
+        "dada2_assign_taxonomy": {"fraction": 0.25, "min": 1, "max": 2},
+        "track_reads": {"fraction": 0.1, "min": 1, "max": 1},
+        "reporter": {"fraction": 0.1, "min": 1, "max": 1},
     },
     "aggressive": {
-        "input_symlink": 4,
-        "cutadapt": 8,
-        "fastqc": 12,
-        "multiqc": 2,
-        "figaro": 6,
-        "dada2_filter": 3,
-        "dada2_error_learning": 2,
-        "dada2_infer_asvs": 2,
-        "dada2_asv_table": 1,
-        "dada2_merge_multiple_runs": 1,
-        "dada2_remove_chimeras": 2,
-        "dada2_assign_taxonomy": 2,
-        "track_reads": 1,
-        "reporter": 1,
+        "input_symlink": {"fraction": 0.5, "min": 2, "max": 4},
+        "cutadapt": {"fraction": 1.0, "min": 2, "max": 8},
+        "fastqc": {"fraction": 1.0, "min": 2, "max": 12},
+        "multiqc": {"fraction": 0.3, "min": 1, "max": 2},
+        "figaro": {"fraction": 0.75, "min": 2, "max": 6},
+        "dada2_filter": {"fraction": 0.35, "min": 1, "max": 3},
+        "dada2_error_learning": {"fraction": 0.2, "min": 1, "max": 2},
+        "dada2_infer_asvs": {"fraction": 0.2, "min": 1, "max": 2},
+        "dada2_asv_table": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_merge_multiple_runs": {"fraction": 0.1, "min": 1, "max": 1},
+        "dada2_remove_chimeras": {"fraction": 0.2, "min": 1, "max": 2},
+        "dada2_assign_taxonomy": {"fraction": 0.3, "min": 1, "max": 2},
+        "track_reads": {"fraction": 0.1, "min": 1, "max": 1},
+        "reporter": {"fraction": 0.1, "min": 1, "max": 1},
     },
 }
 
-if resource_profile not in RESOURCE_CAPS:
+if resource_profile not in RESOURCE_POLICIES:
     raise ValueError(f"Unknown resource profile: {resource_profile}")
 
 def rule_threads(rule_name):
-    return max(1, min(int(threads), int(RESOURCE_CAPS[resource_profile][rule_name])))
+    policy = RESOURCE_POLICIES[resource_profile][rule_name]
+    scaled = math.ceil(int(threads) * float(policy["fraction"]))
+    return max(int(policy["min"]), min(int(policy["max"]), scaled, int(threads)))
 
 run_dirs = config.get("run_dirs","")
 if run_dirs != "":
