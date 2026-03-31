@@ -223,17 +223,25 @@ Without `--bigdata`, AmpWrap keeps the standard DADA2-style inference path.
 
 Optional ASV length filter after merging/chimera removal:
 ```sh
-ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length-tolerance 20
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length auto
 ```
 
-This keeps only merged ASVs within `amplicon_length +/- tolerance`.
+This keeps ASVs around the dominant observed length and warns if the dominant length differs substantially from the expected amplicon length.
 
 Explicit ASV length range:
 ```sh
-ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length-min 360 --asv-length-max 385
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length 360:385
 ```
 
 This is useful when you want to retain only ASVs within a user-defined sequence-length interval after chimera removal.
+
+Accepted short-read input names:
+```text
+Custom:   sample_R1.fastq.gz / sample_R2.fastq.gz
+Illumina: sample_S1_L001_R1_001.fastq.gz / sample_S1_L001_R2_001.fastq.gz
+```
+
+Supported extensions are `.fq`, `.fq.gz`, `.fastq`, and `.fastq.gz`.
 
 Resource profiles:
 ```sh

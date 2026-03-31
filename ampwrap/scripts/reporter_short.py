@@ -77,6 +77,45 @@ def format_error_models(run_dir):
         return ""
     return "\n".join(lines) + "\n"
 
+
+def format_asv_length_filter(output_dir, run_dir):
+    chimera_dir = "all_runs" if len(run_dirs) > 1 else f"{os.path.basename(run_dir)}/intermediate"
+    metadata_path = os.path.join(output_dir, chimera_dir, "asv_length_filter.tsv")
+    if not os.path.exists(metadata_path):
+        return ""
+
+    metadata = pd.read_table(metadata_path)
+    if metadata.empty:
+        return ""
+
+    row = metadata.iloc[0]
+    mode = str(row.get("mode", "off")).strip()
+    if mode in ("", "off", "nan"):
+        return ""
+
+    lines = [
+        "### ASV length filter",
+        f"mode: {mode}",
+    ]
+
+    dominant = row.get("dominant_length", "")
+    expected = row.get("expected_amplicon_length", "")
+    applied_min = row.get("applied_min", "")
+    applied_max = row.get("applied_max", "")
+    if pd.notna(dominant) and str(dominant) != "":
+        lines.append(f"dominant_length: {int(dominant)}")
+    if pd.notna(expected) and str(expected) != "":
+        lines.append(f"expected_amplicon_length: {int(expected)}")
+    if pd.notna(applied_min) and str(applied_min) != "" and pd.notna(applied_max) and str(applied_max) != "":
+        lines.append(f"applied_range: {int(applied_min)}:{int(applied_max)}")
+    if pd.notna(row.get("asvs_before", "")) and pd.notna(row.get("asvs_after", "")):
+        lines.append(f"asvs_retained: {int(row['asvs_after'])}/{int(row['asvs_before'])}")
+    warning = str(row.get("warning", "")).strip()
+    if warning and warning.lower() != "nan":
+        lines.append(f"warning: {warning}")
+
+    return "\n".join(lines) + "\n"
+
 for run_dir in run_dirs:
     cutadapt_log_files = glob.glob(os.path.join(run_dir, "intermediate/cutadapt/cutadapt_summary.log"))
 
@@ -125,7 +164,8 @@ for run_dir in run_dirs:
         "df_multi": df_multi,
         "trim_position": trim_position,
         "max_expected_error": max_expected_error,
-        "error_models": format_error_models(run_dir)
+        "error_models": format_error_models(run_dir),
+        "asv_length_filter": format_asv_length_filter(output_dir, run_dir)
     })
 
 # Taxonomy info
@@ -170,7 +210,8 @@ for r in run_reports:
         parameters = f"""
 ### DADA2 User parameters
 {getDada2Params(dada2_params)}
-{error_model_lines}"""
+{error_model_lines}
+{r['asv_length_filter']}"""
     else:
         error_model_lines = r["error_models"]
         if not error_model_lines and loess_model != "NA":
@@ -179,7 +220,8 @@ for r in run_reports:
 ### DADA2 Figaro parameters
 trim_position: {r['trim_position']}
 max_expected_error: {r['max_expected_error']}
-{error_model_lines}"""
+{error_model_lines}
+{r['asv_length_filter']}"""
 
     section = f"""
 ## Run {r['run']}

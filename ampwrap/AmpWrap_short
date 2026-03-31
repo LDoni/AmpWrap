@@ -177,6 +177,24 @@ def parse_asv_length_tolerance(value):
     return parse_positive_int(value, "--asv-length-tolerance")
 
 
+def parse_asv_length_spec(value):
+    lowered = str(value).strip().lower()
+    if lowered == "auto":
+        return ("auto", None, None)
+
+    match = re.fullmatch(r"(\d+)\s*:\s*(\d+)", str(value).strip())
+    if not match:
+        raise argparse.ArgumentTypeError(
+            "--asv-length must be 'auto' or a range in the form MIN:MAX, e.g. 360:385"
+        )
+
+    minimum = parse_nonnegative_int(match.group(1), "--asv-length")
+    maximum = parse_nonnegative_int(match.group(2), "--asv-length")
+    if minimum > maximum:
+        raise argparse.ArgumentTypeError("--asv-length minimum cannot be greater than maximum")
+    return ("range", minimum, maximum)
+
+
 def parse_trim_pair(value, option_name):
     parts = [p.strip() for p in str(value).split(",")]
     if len(parts) != 2:
@@ -277,7 +295,7 @@ def validate_paired_samples(parsed_files, input_dir):
 def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice,
 metainfo, extension, figaro_name, trim_primers_dada2, disable_discard_untrimmed, dry_run_tune,
 dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
-asv_length_tolerance=None, asv_length_min=None, asv_length_max=None, bigdata_mode=False,
+asv_length_mode="off", asv_length_tolerance=None, asv_length_min=None, asv_length_max=None, bigdata_mode=False,
 dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced"):
     config = {
         "input_dir": input_dir,
@@ -299,6 +317,7 @@ dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced"):
         "analysis_start": datetime.datetime.now().isoformat(timespec="seconds"),
         "dada2_source": "user" if dada2_params else "figaro",
         "max_reads_per_sample": max_reads_per_sample if max_reads_per_sample else 0,
+        "asv_length_mode": asv_length_mode,
         "trim_primers_dada2": bool(trim_primers_dada2),
         "disable_discard_untrimmed": disable_discard_untrimmed,
         "dry_run_tune": dry_run_tune,
@@ -477,21 +496,26 @@ def main():
         ),
     )
     denoising.add_argument(
-        "--asv-length-tolerance", type=parse_asv_length_tolerance,
+        "--asv-length",
+        type=parse_asv_length_spec,
         help=(
-            "Keep only merged ASVs within amplicon_length +/- tolerance.\n"
-            "Useful when merged ASV lengths vary unexpectedly."
+            "ASV length filter applied after chimera removal.\n"
+            "Use 'auto' to keep ASVs around the dominant observed length, or MIN:MAX for an explicit range."
         ),
+    )
+    denoising.add_argument(
+        "--asv-length-tolerance", type=parse_asv_length_tolerance,
+        help=argparse.SUPPRESS,
     )
     denoising.add_argument(
         "--asv-length-min",
         type=lambda value: parse_nonnegative_int(value, "--asv-length-min"),
-        help="Minimum ASV length to retain after chimera removal.",
+        help=argparse.SUPPRESS,
     )
     denoising.add_argument(
         "--asv-length-max",
         type=lambda value: parse_nonnegative_int(value, "--asv-length-max"),
-        help="Maximum ASV length to retain after chimera removal.",
+        help=argparse.SUPPRESS,
     )
 
     execution = parser.add_argument_group("execution")
@@ -552,15 +576,33 @@ def main():
         if dada2_trim_right is None:
             dada2_trim_right = (0, 0)
 
-    if args.asv_length_tolerance is not None and (args.asv_length_min is not None or args.asv_length_max is not None):
-        print("ERROR: use either --asv-length-tolerance or --asv-length-min/--asv-length-max, not both.")
+    asv_length_mode = "off"
+    asv_length_min = None
+    asv_length_max = None
+    if args.asv_length is not None and (
+        args.asv_length_tolerance is not None or args.asv_length_min is not None or args.asv_length_max is not None
+    ):
+        print("ERROR: use either --asv-length or the legacy ASV length options, not both.")
         sys.exit(1)
-    if (args.asv_length_min is None) ^ (args.asv_length_max is None):
-        print("ERROR: --asv-length-min and --asv-length-max must be provided together.")
-        sys.exit(1)
-    if args.asv_length_min is not None and args.asv_length_min > args.asv_length_max:
-        print("ERROR: --asv-length-min cannot be greater than --asv-length-max.")
-        sys.exit(1)
+
+    if args.asv_length is not None:
+        asv_length_mode, parsed_min, parsed_max = args.asv_length
+        asv_length_min = parsed_min
+        asv_length_max = parsed_max
+    elif args.asv_length_tolerance is not None:
+        asv_length_mode = "range"
+        asv_length_min = max(1, int(args.amplen) - int(args.asv_length_tolerance))
+        asv_length_max = int(args.amplen) + int(args.asv_length_tolerance)
+    elif args.asv_length_min is not None or args.asv_length_max is not None:
+        if (args.asv_length_min is None) ^ (args.asv_length_max is None):
+            print("ERROR: --asv-length-min and --asv-length-max must be provided together.")
+            sys.exit(1)
+        if args.asv_length_min > args.asv_length_max:
+            print("ERROR: --asv-length-min cannot be greater than --asv-length-max.")
+            sys.exit(1)
+        asv_length_mode = "range"
+        asv_length_min = args.asv_length_min
+        asv_length_max = args.asv_length_max
 
     if not use_custom_dada2 and args.amplen is None:
         print("ERROR: -l/--amplen is required unless --dada2_params provides explicit truncLen/maxEE.")
@@ -677,9 +719,10 @@ def main():
                 loess_model=args.loess_model,
                 max_reads_per_sample=args.max_reads_per_sample,
                 db_dir=args.db_dir,
+                asv_length_mode=asv_length_mode,
                 asv_length_tolerance=args.asv_length_tolerance,
-                asv_length_min=args.asv_length_min,
-                asv_length_max=args.asv_length_max,
+                asv_length_min=asv_length_min,
+                asv_length_max=asv_length_max,
                 bigdata_mode=args.bigdata,
                 dada2_trim_left=dada2_trim_left,
                 dada2_trim_right=dada2_trim_right,
