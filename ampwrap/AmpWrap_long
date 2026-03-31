@@ -42,16 +42,19 @@ def parse_nl_min_qual(value):
 
 
 def default_long_db_dir():
-    env_value = os.environ.get("AMPWRAP_LONG_DB_DIR") or os.environ.get("AMPWRAP_DB_DIR")
+    env_value = os.environ.get("AMPWRAP_LONG_DB_DIR")
     if env_value:
         return env_value
+    root_value = os.environ.get("AMPWRAP_DB_DIR")
+    if root_value:
+        return os.path.join(root_value, "emu")
+    return os.path.join(os.path.expanduser("~"), ".ampwrap", "db", "emu")
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_db_dir = os.path.join(script_dir, "db_s", "emu")
-    if os.path.isdir(repo_db_dir):
-        return repo_db_dir
 
-    return os.path.join(os.getcwd(), "db_s", "emu")
+def default_long_output_dir():
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return os.path.join(os.getcwd(), f"ampwrap_long_{timestamp}")
 
 
 def print_banner():
@@ -189,7 +192,7 @@ def main():
     general = parser.add_argument_group("general options")
     general.add_argument(
         "-o", "--output-directory",
-        default=os.path.join(os.getcwd(), "ampwrap_long"),
+        default=default_long_output_dir(),
         help="Output directory.",
     )
     general.add_argument(
@@ -201,7 +204,7 @@ def main():
     general.add_argument(
         "--db-dir",
         default=default_long_db_dir(),
-        help="Directory that stores EMU databases. Defaults to AMPWRAP_LONG_DB_DIR, AMPWRAP_DB_DIR, or local db_s/emu.",
+        help="Directory that stores EMU databases. Defaults to AMPWRAP_LONG_DB_DIR, AMPWRAP_DB_DIR/emu, or ~/.ampwrap/db/emu.",
     )
     general.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
     general.add_argument("--db-info", action="store_true", help="Print available databases with version and checksum info")

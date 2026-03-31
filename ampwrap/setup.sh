@@ -16,11 +16,7 @@ install_path() {
 	fi
 }
 
-for i in AmpWrap_long AmpWrap_short ampwrap scripts snakefile.long snakefile.short
+for i in AmpWrap_db AmpWrap_long AmpWrap_short ampwrap scripts snakefile.long snakefile.short
 do
 	install_path "$i"
 done
-
-if [ -d db_s ]; then
-	install_path db_s
-fi

@@ -150,6 +150,38 @@ S1_r2.fq.gz
 
 If input files do not follow one of these paired-end conventions, AmpWrap reports the expected formats explicitly and shows which parser failed.
 
+## Database cache
+
+AmpWrap now uses a central database cache by default instead of copying databases into each clone or conda environment.
+
+- Short-read taxonomy databases default to `~/.ampwrap/db`
+- Long-read EMU databases default to `~/.ampwrap/db/emu`
+- You can override the location with `--db-dir`
+- You can also set `AMPWRAP_DB_DIR` globally
+
+Downloaded databases are tracked in a small manifest file:
+
+```text
+~/.ampwrap/db/manifest.tsv
+```
+
+The manifest stores:
+
+- category
+- name
+- filename
+- md5
+- source_url
+- local_path
+- last_checked
+
+You can inspect the cache with:
+
+```sh
+ampwrap db list
+ampwrap db list --category dada2
+```
+
 ## AmpWrap for Short Reads (Illumina)
 To process short-read 16S rRNA gene data from Illumina sequencing:
 ##  Workflow
@@ -165,6 +197,18 @@ Basic usage:
 ```sh
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon_length
 ```
+
+If `-o/--output_directory` is omitted, AmpWrap creates a timestamped output directory, for example:
+
+```text
+ampwrap_short_20260331_114500
+```
+
+Optional 16S species-level annotation with exact matching:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon_length --species
+```
+`--species` adds a DADA2 `addSpecies(...)` step after genus-level assignment. It is currently supported only for `dada2_silva_genus138` and `dada2_RDP_genus19`, and it uses exact matching only.
 
 If you want to skip FIGARO and provide DADA2 trimming/filtering parameters directly:
 ```sh
@@ -188,6 +232,11 @@ In multiple-run mode, run folders are named after the input directory basenames 
 
 ### Additional useful options
 
+Species-level assignment for supported 16S DADA2 databases:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 -d dada2_silva_genus138 --species
+```
+
 Automatic/shared error model selection for binned qualities:
 ```sh
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --loess_model auto
@@ -197,6 +246,7 @@ Force a specific error model:
 ```sh
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --loess_model 1
 ```
+
 
 Cap very deep libraries before QC/trimming:
 ```sh
@@ -316,6 +366,12 @@ If the test goes smoothly you are ready to analyze your data
 
 
 ## AmpWrap for Long Reads (Nanopore)
+If `-o/--output-directory` is omitted, AmpWrap creates a timestamped output directory, for example:
+
+```text
+ampwrap_long_20260331_114500
+```
+
 For long-read 16S rRNA gene data from Nanopore sequencing, use:
 ## Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)

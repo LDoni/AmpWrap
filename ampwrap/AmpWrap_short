@@ -38,6 +38,11 @@ DB_CHOICES = [
     "dada2_18S_silva132"
 ]
 
+SPECIES_SUPPORTED_DB_CHOICES = {
+    "dada2_silva_genus138",
+    "dada2_RDP_genus19",
+}
+
 
 class ReadableHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
     pass
@@ -217,13 +222,12 @@ def default_db_dir():
     env_value = os.environ.get("AMPWRAP_DB_DIR")
     if env_value:
         return env_value
+    return os.path.join(os.path.expanduser("~"), ".ampwrap", "db")
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    repo_db_dir = os.path.join(script_dir, "db_s")
-    if os.path.isdir(repo_db_dir):
-        return repo_db_dir
 
-    return os.path.join(os.getcwd(), "db_s")
+def default_short_output_dir():
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return os.path.join(os.getcwd(), f"ampwrap_short_{timestamp}")
 
 
 def sanitize_run_name(path):
@@ -296,7 +300,7 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
 metainfo, extension, figaro_name, trim_primers_dada2, disable_discard_untrimmed, dry_run_tune,
 dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
 asv_length_mode="off", asv_length_tolerance=None, asv_length_min=None, asv_length_max=None, bigdata_mode=False,
-dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced"):
+dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced", species=False):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -324,6 +328,7 @@ dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced"):
         "threads": threads if threads not in (None, "all") else os.cpu_count(),
         "bigdata_mode": bool(bigdata_mode),
         "resource_profile": resource_profile,
+        "species_assignment": bool(species),
     }
     if dada2_trim_left is not None:
         config["dada2_trim_left"] = ",".join(str(v) for v in dada2_trim_left)
@@ -422,18 +427,26 @@ def main():
     required.add_argument("-A", "--reverse_primer",  help="Reverse primer sequence")
 
     general = parser.add_argument_group("general options")
-    general.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "ampwrap_short"), help="Output directory")
+    general.add_argument("-o", "--output_directory", default=default_short_output_dir(), help="Output directory")
     general.add_argument(
         "--db-dir",
         default=default_db_dir(),
         help=(
             "Directory that stores downloaded taxonomy databases.\n"
-            "Defaults to AMPWRAP_DB_DIR if set, otherwise the local ampwrap/db_s directory."
+            "Defaults to AMPWRAP_DB_DIR if set, otherwise ~/.ampwrap/db."
         ),
     )
     general.add_argument(
         "-d", "--db_choice", default="dada2_silva_genus138",
         help="Database for taxonomy assignment.\nChoices:\n" + "\n".join(f"  - {choice}" for choice in DB_CHOICES),
+    )
+    general.add_argument(
+        "--species",
+        action="store_true",
+        help=(
+            "Add optional 16S species-level assignments with DADA2 addSpecies.\n"
+            "Supported only for dada2_silva_genus138 and dada2_RDP_genus19."
+        ),
     )
     general.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
     general.add_argument("--db-info", action="store_true", help="Show available databases and exit")
@@ -608,6 +621,13 @@ def main():
         print("ERROR: -l/--amplen is required unless --dada2_params provides explicit truncLen/maxEE.")
         sys.exit(1)
 
+    if args.species and args.db_choice not in SPECIES_SUPPORTED_DB_CHOICES:
+        print(
+            "ERROR: --species is currently supported only for "
+            "dada2_silva_genus138 and dada2_RDP_genus19."
+        )
+        sys.exit(1)
+
     if len(input_dirs) > 1 and not trim_primers_dada2:
         print(
             Fore.YELLOW
@@ -726,7 +746,8 @@ def main():
                 bigdata_mode=args.bigdata,
                 dada2_trim_left=dada2_trim_left,
                 dada2_trim_right=dada2_trim_right,
-                resource_profile=args.resource_profile)
+                resource_profile=args.resource_profile,
+                species=args.species)
     run_snakemake(config_path, is_quiet, cores=cores)
 
 

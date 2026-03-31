@@ -180,6 +180,7 @@ tax_methods = {
     "dada2_GTDB_r202": ("DADA2", "GTDB", "r202"),
 }
 method, database, db_version = tax_methods.get(snakemake.params.taxonomy_method, ("Unknown", "Unknown", "Unknown"))
+species_assignment = bool(snakemake.params.get("species_assignment", False))
 
 # Info workflow
 workflow_file = snakemake.params.workflow_file
@@ -246,6 +247,7 @@ Reverse: {snakemake.params.reverse_p}
 Method: {method}
 Database: {database}
 Version: {db_version}
+Species assignment: {"enabled" if species_assignment else "disabled"}
 
 ## Ampwrap info
 Workflow: {workflow_file}

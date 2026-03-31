@@ -12,6 +12,7 @@ trimming_method = config.get("trimming_method")
 tax_db = config["tax_db"]
 db_root = config.get("db_dir", "db_s/emu")
 db_dir = os.path.join(db_root, tax_db)
+db_manifest = os.path.join(os.path.dirname(db_root.rstrip("/")), "manifest.tsv")
 cpus = int(config["threads"])
 #to_cutadapt = all(p in config and config[p] not in [None, ""] for p in ["forward_primer", "reverse_primer"])
 chimera = config.get("chimera", None)
@@ -28,6 +29,16 @@ to_cutadapt = all(
 
 forward_primer = config.get("forward_primer")
 reverse_primer = config.get("reverse_primer")
+CONDA_BIN = os.path.join(os.environ.get('CONDA_PREFIX', ''), 'bin')
+LOCAL_SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(workflow.snakefile)), 'scripts')
+if os.path.exists(LOCAL_SCRIPTS_DIR):
+    SCRIPTS_DIR = LOCAL_SCRIPTS_DIR
+elif os.path.exists(os.path.join(CONDA_BIN, 'scripts')):
+    SCRIPTS_DIR = os.path.join(CONDA_BIN, 'scripts')
+else:
+    SCRIPTS_DIR = 'scripts'
+
+UPDATE_DB_MANIFEST = os.path.join(SCRIPTS_DIR, "update_db_manifest.py")
 
 def getCutAdaptInput(wildcards):
         if trimming_method == None: return({"fq":f"{input_dir}/{wildcards.sample}.{file_extension}"})
@@ -342,9 +353,26 @@ rule emu_database:
                 if result.returncode != 0:
                     raise ValueError(f"ERROR: MD5 checksum failed for {db_zip}")
                 subprocess.run(["unzip", "-o", db_zip, "-d", output.the_dir], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+                subprocess.run(
+                    [
+                        "python",
+                        UPDATE_DB_MANIFEST,
+                        "--manifest", db_manifest,
+                        "--category", "emu",
+                        "--name", tax_db,
+                        "--filename", os.path.basename(db_zip),
+                        "--md5", params.md5_dict["pr2"],
+                        "--source-url", db_url,
+                        "--local-path", output.the_dir,
+                    ],
+                    check=True,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                )
 
             else:
                 db_tar = f"{db_dir}/{tax_db}.tar"
+                db_url = f"osf://56uf7/emu-prebuilt/{tax_db}.tar"
                 subprocess.run(
                     ["osf", "-p", "56uf7", "fetch", f"osfstorage/emu-prebuilt/{tax_db}.tar", db_tar],
                     check=True,
@@ -362,6 +390,22 @@ rule emu_database:
                     raise ValueError(f"ERROR: MD5 checksum failed for {db_tar}")
 
                 subprocess.run(["tar", "-xvf", db_tar, "-C", output.the_dir], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+                subprocess.run(
+                    [
+                        "python",
+                        UPDATE_DB_MANIFEST,
+                        "--manifest", db_manifest,
+                        "--category", "emu",
+                        "--name", tax_db,
+                        "--filename", os.path.basename(db_tar),
+                        "--md5", params.md5_dict[tax_db],
+                        "--source-url", db_url,
+                        "--local-path", output.the_dir,
+                    ],
+                    check=True,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                )
 
 
 rule emu_abundance:

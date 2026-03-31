@@ -5,6 +5,7 @@ input <- args[1]
 silva_db <- args[2]
 output_dir <- args[3]
 thread_count_arg <- if (length(args) >= 4) args[4] else "1"
+species_db <- if (length(args) >= 5) args[5] else "NONE"
 options(warn=-1)
 suppressPackageStartupMessages(library(dada2))
 suppressPackageStartupMessages(library(biomformat))
@@ -37,6 +38,9 @@ seqtab_nochim <- readRDS(input)
 
 # Assign taxonomy
 taxa <- assignTaxonomy(seqtab_nochim, silva_db, multithread = dada2_multithread)
+if (!identical(species_db, "NONE")) {
+  taxa <- addSpecies(taxa, species_db)
+}
 
 asv_seqs <- colnames(seqtab_nochim)
 
@@ -52,10 +56,13 @@ row.names(asv_tab) <- sub(">", "", asv_headers)
 write.table(asv_tab, file.path(output_dir, "ASVs_counts.tsv"), sep = "\t", row.names = TRUE, quote = FALSE)
 
 # tax
-ranks <- c("domain", "phylum", "class", "order", "family", "genus")
 asv_tax <- taxa
+ranks <- c("domain", "phylum", "class", "order", "family", "genus")
+if (ncol(asv_tax) >= 7) {
+  ranks <- c(ranks, "species")
+}
 asv_tax[startsWith(asv_tax, "unclassified_")] <- NA
-colnames(asv_tax) <- ranks
+colnames(asv_tax) <- ranks[seq_len(ncol(asv_tax))]
 
 rownames(asv_tax) <- gsub(pattern = ">", replacement = "", x = asv_headers)
 
