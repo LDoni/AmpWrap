@@ -8,12 +8,13 @@ def main():
     if len(sys.argv) <= 1 or sys.argv[1] in ('-h', '--help'):
         print("""
 Usage: ampwrap <workflow> [args]
-    workflow: 'short' or 'long' (required)
+    workflow: 'short', 'long', or 'db' (required)
     args:     arguments for the selected workflow
 
 To see workflow-specific help:
     ampwrap short --help
     ampwrap long --help
+    ampwrap db --help
 """)
         sys.exit(0 if len(sys.argv) <= 1 else 1)
 
@@ -22,12 +23,13 @@ To see workflow-specific help:
     executables = {
         'test': 'AmpWrap_short.ema',
         'short': 'AmpWrap_short',
-        'long': 'AmpWrap_long'
+        'long': 'AmpWrap_long',
+        'db': 'AmpWrap_db'
     }
 
    
     if workflow not in executables:
-        print(f"Error: Unknown workflow '{workflow}'. Choose 'short' or 'long'.")
+        print(f"Error: Unknown workflow '{workflow}'. Choose 'short', 'long', or 'db'.")
         sys.exit(1)
 
     

@@ -4,34 +4,128 @@ import json
 import datetime
 import os
 import glob
+import sys
 
-output_dir = snakemake.params.output_dir if "output_dir" in snakemake.params else os.path.dirname(snakemake.output.report)
+if getattr(snakemake, "log", None):
+    log_path = str(snakemake.log[0])
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    log_handle = open(log_path, "w")
+    sys.stdout = log_handle
+    sys.stderr = log_handle
 
-main_dir = os.path.dirname(output_dir)
-
-run_dirs = sorted(glob.glob(os.path.join(main_dir, "run*")))
+output_dir = snakemake.params.get("output_dir")
+if not output_dir:
+    output_dir = os.path.dirname(os.path.dirname(snakemake.output.report))
+run_names = [str(run) for run in snakemake.params.get("runs", [])]
+run_dirs = [os.path.join(output_dir, run_name) for run_name in run_names if os.path.isdir(os.path.join(output_dir, run_name))]
 if not run_dirs:
     raise FileNotFoundError(f"No run directories found in {output_dir}")
 
 run_reports = []
 dada2_params = snakemake.params["dada2_params"]
+loess_model = str(snakemake.params.get("loess_model", "NA")).strip().upper()
+
+
+def parse_percent(value):
+    return float(str(value).strip().rstrip("%"))
+
+
+def format_count_percent(count, total):
+    if total <= 0:
+        return str(int(count))
+    pct = (float(count) / float(total)) * 100
+    return f"{int(count)} ({pct:.1f}%)"
+
+
+def build_denoising_table(cutadapt_df, dada2_df):
+    df = pd.merge(cutadapt_df, dada2_df, on="sample", how="inner")
+    if df.empty:
+        raise ValueError("No overlapping sample names between cutadapt and DADA2 tracking tables")
+    df["reads_retained"] = pd.to_numeric(df["reads_retained"])
+    df["raw_reads"] = df["reads_retained"].astype(int)
+
+    report_df = pd.DataFrame({
+        "sample": df["sample"],
+        "raw_reads": df["raw_reads"].astype(int).astype(str),
+        "cutadapt": df.apply(lambda row: format_count_percent(row["reads.in"], row["raw_reads"]), axis=1),
+        "filtered": df.apply(lambda row: format_count_percent(row["reads.out"], row["raw_reads"]), axis=1),
+        "dadaF": df.apply(lambda row: format_count_percent(row["dadaF"], row["raw_reads"]), axis=1),
+        "dadaR": df.apply(lambda row: format_count_percent(row["dadaR"], row["raw_reads"]), axis=1),
+        "merged": df.apply(lambda row: format_count_percent(row["merged"], row["raw_reads"]), axis=1),
+        "nonchim": df.apply(lambda row: format_count_percent(row["nonchim"], row["raw_reads"]), axis=1),
+    })
+    return report_df.set_index("sample")
+
+
+def format_error_models(run_dir):
+    metadata_files = glob.glob(os.path.join(run_dir, "intermediate/dada2_error_learning/model_selection.tsv"))
+    if not metadata_files:
+        return ""
+
+    metadata = pd.read_table(metadata_files[0])
+    lines = []
+    for _, row in metadata.iterrows():
+        direction = str(row["direction"]).strip()
+        requested = str(row["requested_model"]).strip()
+        selected = str(row["selected_model"]).strip()
+        reason = str(row["selection_reason"]).strip()
+        if requested == selected:
+            lines.append(f"{direction}_error_model: {selected} ({reason})")
+        else:
+            lines.append(f"{direction}_error_model: {requested} -> {selected} ({reason})")
+    if not lines:
+        return ""
+    return "\n".join(lines) + "\n"
+
+
+def format_asv_length_filter(output_dir, run_dir):
+    chimera_dir = "all_runs/intermediate" if len(run_dirs) > 1 else f"{os.path.basename(run_dir)}/intermediate"
+    metadata_path = os.path.join(output_dir, chimera_dir, "asv_length_filter.tsv")
+    if not os.path.exists(metadata_path):
+        return ""
+
+    metadata = pd.read_table(metadata_path)
+    if metadata.empty:
+        return ""
+
+    row = metadata.iloc[0]
+    mode = str(row.get("mode", "off")).strip()
+    if mode in ("", "off", "nan"):
+        return ""
+
+    lines = [
+        "### ASV length filter",
+        f"mode: {mode}",
+    ]
+
+    dominant = row.get("dominant_length", "")
+    expected = row.get("expected_amplicon_length", "")
+    applied_min = row.get("applied_min", "")
+    applied_max = row.get("applied_max", "")
+    if pd.notna(dominant) and str(dominant) != "":
+        lines.append(f"dominant_length: {int(dominant)}")
+    if pd.notna(expected) and str(expected) != "":
+        lines.append(f"expected_amplicon_length: {int(expected)}")
+    if pd.notna(applied_min) and str(applied_min) != "" and pd.notna(applied_max) and str(applied_max) != "":
+        lines.append(f"applied_range: {int(applied_min)}:{int(applied_max)}")
+    if pd.notna(row.get("asvs_before", "")) and pd.notna(row.get("asvs_after", "")):
+        lines.append(f"asvs_retained: {int(row['asvs_after'])}/{int(row['asvs_before'])}")
+    warning = str(row.get("warning", "")).strip()
+    if warning and warning.lower() != "nan":
+        lines.append(f"warning: {warning}")
+
+    return "\n".join(lines) + "\n"
 
 for run_dir in run_dirs:
     cutadapt_log_files = glob.glob(os.path.join(run_dir, "intermediate/cutadapt/cutadapt_summary.log"))
 
     
-    dada2_files = glob.glob(os.path.join(main_dir, "**/read-count-tracking.tsv"), recursive=True)
+    dada2_files = [str(snakemake.input.track_report)]
 
     
     need_figaro = not bool(dada2_params and str(dada2_params).strip())
     figaro_files = glob.glob(os.path.join(run_dir, "intermediate/figaro/trimParameters.json")) if need_figaro else []
 
-    print(f"DEBUG: Run {os.path.basename(run_dir)}")
-    print(f"  Cutadapt: {cutadapt_log_files}")
-    print(f"  DADA2: {dada2_files}")
-    print(f"  Figaro: {figaro_files} (needed={need_figaro})")
-
-    # FIX: controlla figaro_files solo se serve
     if not cutadapt_log_files or not dada2_files or (need_figaro and not figaro_files):
         raise FileNotFoundError(
             f"Missing files in {run_dir}:\n"
@@ -43,24 +137,10 @@ for run_dir in run_dirs:
     cutadapt_log = cutadapt_log_files[0]
     dada2_file = dada2_files[0]
 
-    df1 = pd.read_table(cutadapt_log, delim_whitespace=True)
-    df2 = pd.read_table(dada2_file).loc[:, ["sample", "reads.in", "reads.out", "dadaF", "dadaR", "merged", "nonchim", "total_retained"]]
-    df2["total_retained"] = df2["total_retained"].apply(lambda x: f"{x}%")
-    df = pd.merge(df1, df2, on="sample", how="inner")
-
-    new_columns = pd.MultiIndex.from_tuples([
-        ("cutadapt", "reads_retained"),
-        ("cutadapt", "bps_retained"),
-        ("dada2", "reads.in"),
-        ("dada2", "reads.out"),
-        ("dada2", "dadaF"),
-        ("dada2", "dadaR"),
-        ("dada2", "merged"),
-        ("dada2", "nonchim"),
-        ("dada2", "total_retained"),
-    ])
-    df_multi = df.set_index("sample")
-    df_multi.columns = new_columns
+    df1 = pd.read_table(cutadapt_log, sep="\t")
+    df2 = pd.read_table(dada2_file).loc[:, ["sample", "reads.in", "reads.out", "dadaF", "dadaR", "merged", "nonchim"]]
+    df2["sample"] = df2["sample"].str.replace(r"_R1_filtered\.fq\.gz$", "", regex=True)
+    df_multi = build_denoising_table(df1, df2)
 
     
     trim_position = None
@@ -77,7 +157,9 @@ for run_dir in run_dirs:
         "run": os.path.basename(run_dir),
         "df_multi": df_multi,
         "trim_position": trim_position,
-        "max_expected_error": max_expected_error
+        "max_expected_error": max_expected_error,
+        "error_models": format_error_models(run_dir),
+        "asv_length_filter": format_asv_length_filter(output_dir, run_dir)
     })
 
 # Taxonomy info
@@ -92,12 +174,15 @@ tax_methods = {
     "dada2_GTDB_r202": ("DADA2", "GTDB", "r202"),
 }
 method, database, db_version = tax_methods.get(snakemake.params.taxonomy_method, ("Unknown", "Unknown", "Unknown"))
+species_assignment = bool(snakemake.params.get("species_assignment", False))
 
 # Info workflow
 workflow_file = snakemake.params.workflow_file
 version = snakemake.params.version
 start_formatted = datetime.datetime.fromisoformat(snakemake.params.start).strftime('%Y-%m-%d %H:%M:%S')
-end_formatted = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+input_mtimes = [os.path.getmtime(str(path)) for path in snakemake.input if os.path.exists(str(path))]
+end_timestamp = max(input_mtimes) if input_mtimes else datetime.datetime.now().timestamp()
+end_formatted = datetime.datetime.fromtimestamp(end_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def getDada2Params(dada2_params):
@@ -116,16 +201,22 @@ def getDada2Params(dada2_params):
 report_sections = []
 for r in run_reports:
     if dada2_params and str(dada2_params).strip():
+        error_model_lines = r["error_models"]
         parameters = f"""
 ### DADA2 User parameters
 {getDada2Params(dada2_params)}
-"""
+{error_model_lines}
+{r['asv_length_filter']}"""
     else:
+        error_model_lines = r["error_models"]
+        if not error_model_lines and loess_model != "NA":
+            error_model_lines = f"loess_model: {loess_model}\n"
         parameters = f"""
-### DADA2 Figaro parameters
+### DADA2 optimizer parameters
 trim_position: {r['trim_position']}
 max_expected_error: {r['max_expected_error']}
-"""
+{error_model_lines}
+{r['asv_length_filter']}"""
 
     section = f"""
 ## Run {r['run']}
@@ -150,6 +241,7 @@ Reverse: {snakemake.params.reverse_p}
 Method: {method}
 Database: {database}
 Version: {db_version}
+Species assignment: {"enabled" if species_assignment else "disabled"}
 
 ## Ampwrap info
 Workflow: {workflow_file}

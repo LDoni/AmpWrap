@@ -57,13 +57,28 @@ names(rev) <- sample_names
 err_fwd <- readRDS(err_fwd_file)
 err_rev <- readRDS(err_rev_file)
 
-derep_fwd <- derepFastq(fwd)
-derep_rev <- derepFastq(rev)
+dada_fwd <- vector("list", length(sample_names))
+dada_rev <- vector("list", length(sample_names))
+merged <- vector("list", length(sample_names))
+names(dada_fwd) <- sample_names
+names(dada_rev) <- sample_names
+names(merged) <- sample_names
 
-dada_fwd <- dada(derep_fwd, err = err_fwd, multithread = dada2_multithread)
-dada_rev <- dada(derep_rev, err = err_rev, multithread = dada2_multithread)
+for (sam in sample_names) {
+  message("Processing sample: ", sam)
+  derep_fwd <- derepFastq(fwd[[sam]])
+  derep_rev <- derepFastq(rev[[sam]])
 
-merged <- mergePairs(dada_fwd, derep_fwd, dada_rev, derep_rev, trimOverhang = TRUE)
+  dada_fwd[[sam]] <- dada(derep_fwd, err = err_fwd, multithread = dada2_multithread)
+  dada_rev[[sam]] <- dada(derep_rev, err = err_rev, multithread = dada2_multithread)
+  merged[[sam]] <- mergePairs(
+    dada_fwd[[sam]],
+    derep_fwd,
+    dada_rev[[sam]],
+    derep_rev,
+    trimOverhang = TRUE
+  )
+}
 
 saveRDS(merged, output)
 saveRDS(dada_fwd, file.path(dirname(output), "dada_fwd.rds"))

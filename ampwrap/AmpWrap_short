@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import glob
 import os
 import sys
@@ -12,9 +13,9 @@ from colorama import Fore, Style
 # DATABASE TABLE
 DB_TABLE = [
     ["Database Name", "Source", "Version / Date", "File Name", "MD5", "Download Link"],
-    ["SILVA SSU r138.2", "DECIPHER", "2024", "SILVA_SSU_r138_2_2024.RData", "4e272e39c2d71f5d3e7a31b00dbb1df4", "https://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2_2024.RData"],
-    ["GTDB r226", "DECIPHER", "April 2025", "GTDB_r226-mod_April2025.RData", "2aca8a1cfc4c8357a61eb51413f4e476", "https://www2.decipher.codes/data/Downloads/TrainingSets/GTDB_r226-mod_April2025.RData"],
-    ["RDP v18", "DECIPHER", "July 2020", "RDP_v18-mod_July2020.RData", "e0e8ed5bc34b28ab416df2d7fc1568ec", "https://www2.decipher.codes/data/Downloads/TrainingSets/RDP_v18-mod_July2020.RData"],
+    ["SILVA SSU r138.2", "DECIPHER", "2024", "SILVA_SSU_r138.2_v2.RData", "ed0b7e62542cd5615fb77ef15bcb9de0", "https://drive.usercontent.google.com/download?export=download&id=11YYCiB-gJqAP7-wIu35smorelLE-7IgJ&confirm=t"],
+    ["GTDB r226", "DECIPHER", "April 2025", "GTDB_r226_classifier.RData", "2aca8a1cfc4c8357a61eb51413f4e476", "https://drive.usercontent.google.com/download?export=download&id=1wMS2jskFeI9RGXn3fBO_yyvciiB8PMu0&confirm=t"],
+    ["RDP v18", "DECIPHER", "July 2020", "RDP_TrainingSet_v18.RData", "af228a61cf5c382e847770c53a8d531b", "https://drive.usercontent.google.com/download?export=download&id=1AsgpYQtheSuZbFkOD9HFZZm81A-IM5UO&confirm=t"],
     ["RDP v19", "DADA2", "2023-08-23", "rdp_19_toGenus_trainset.fa.gz", "390b8a359c45648adf538e72a1ee7e28", "https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz?download=1"],
     ["SILVA v138.2", "DADA2", "2025", "silva_nr99_v138.2_toGenus_trainset.fa.gz", "1764e2a36b4500ccb1c7d5261948a414", "https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1"],
     ["RefSeq+RDP v16", "DADA2", "2020-06-11", "RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz", "53aac0449c41db387d78a3c17b06ad07", "https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1"],
@@ -36,6 +37,24 @@ DB_CHOICES = [
     "dada2_pr2_5.1.1",
     "dada2_18S_silva132"
 ]
+
+SPECIES_SUPPORTED_DB_CHOICES = {
+    "dada2_silva_genus138",
+    "dada2_RDP_genus19",
+}
+
+
+class ReadableHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
+    pass
+
+
+def load_ampwrap_version():
+    version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")
+    try:
+        with open(version_path) as handle:
+            return handle.read().strip()
+    except OSError:
+        return "unknown"
 
 # UTILS
 
@@ -94,11 +113,13 @@ This may affect the FIGARO optimization of dada2 denoising parameters.
 
 def FVieiraStandard(file_):
     fileName = os.path.basename(file_)
-    basename = fileName.split(".")[0]
+    basename = re.sub(r"\.(fastq|fq)(\.gz)?$", "", fileName, flags=re.IGNORECASE)
     try:
-        sample, direction = basename.split("_")
+        sample, direction = basename.rsplit("_", 1)
         direction = direction.replace("R", "").replace("r", "")
         direction = int(direction)
+        if direction not in (1, 2) or not sample:
+            raise ValueError
     except ValueError:
         raise ValueError(
             f"{fileName} does not appear to be a valid file for this standard. Please check file naming convention."
@@ -119,8 +140,204 @@ def IlluminaStandard(file_):
         )
     return file_, fileName, sample, direction
 
+def parse_cores(value):
+    if isinstance(value, int):
+        if value < 1:
+            raise argparse.ArgumentTypeError("--cores must be >= 1")
+        return value
+
+    lowered = str(value).strip().lower()
+    if lowered == "all":
+        return "all"
+
+    try:
+        parsed = int(lowered)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("--cores must be a positive integer or 'all'") from exc
+
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("--cores must be >= 1")
+    return parsed
+
+
+def parse_positive_int(value, option_name):
+    try:
+        parsed = int(str(value).strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{option_name} must be a positive integer") from exc
+    if parsed < 1:
+        raise argparse.ArgumentTypeError(f"{option_name} must be >= 1")
+    return parsed
+
+
+def parse_nonnegative_int(value, option_name):
+    try:
+        parsed = int(str(value).strip())
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{option_name} must be a non-negative integer") from exc
+    if parsed < 0:
+        raise argparse.ArgumentTypeError(f"{option_name} must be >= 0")
+    return parsed
+
+
+def parse_max_reads(value):
+    return parse_positive_int(value, "--max-reads-per-sample")
+
+
+def parse_asv_length_tolerance(value):
+    return parse_positive_int(value, "--asv-length-tolerance")
+
+
+def parse_asv_length_spec(value):
+    lowered = str(value).strip().lower()
+    if lowered == "auto":
+        return ("auto", None, None)
+
+    match = re.fullmatch(r"(\d+)\s*:\s*(\d+)", str(value).strip())
+    if not match:
+        raise argparse.ArgumentTypeError(
+            "--asv-length must be 'auto' or a range in the form MIN:MAX, e.g. 360:385"
+        )
+
+    minimum = parse_nonnegative_int(match.group(1), "--asv-length")
+    maximum = parse_nonnegative_int(match.group(2), "--asv-length")
+    if minimum > maximum:
+        raise argparse.ArgumentTypeError("--asv-length minimum cannot be greater than maximum")
+    return ("range", minimum, maximum)
+
+
+def parse_trim_pair(value, option_name):
+    parts = [p.strip() for p in str(value).split(",")]
+    if len(parts) != 2:
+        raise argparse.ArgumentTypeError(
+            f"{option_name} must contain exactly two comma-separated integers, e.g. 19,20"
+        )
+    return tuple(parse_nonnegative_int(part, option_name) for part in parts)
+
+
+def parse_resource_profile(value):
+    lowered = str(value).strip().lower()
+    if lowered not in {"safe", "balanced", "aggressive"}:
+        raise argparse.ArgumentTypeError(
+            "--resource-profile must be one of: safe, balanced, aggressive"
+        )
+    return lowered
+
+
+def default_db_dir():
+    env_value = os.environ.get("AMPWRAP_DB_DIR")
+    if env_value:
+        return env_value
+    return os.path.join(os.path.expanduser("~"), ".ampwrap", "db")
+
+
+def default_short_output_dir():
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return os.path.join(os.getcwd(), f"ampwrap_short_{timestamp}")
+
+
+def sanitize_run_name(path):
+    base_name = os.path.basename(os.path.normpath(path))
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", base_name).strip("._-")
+    return sanitized or "run"
+
+
+def ensure_unique_run_name(candidate, seen_names):
+    if candidate not in seen_names:
+        seen_names.add(candidate)
+        return candidate
+
+    counter = 2
+    while f"{candidate}_{counter}" in seen_names:
+        counter += 1
+    unique_name = f"{candidate}_{counter}"
+    seen_names.add(unique_name)
+    return unique_name
+
+
+def validate_dada2_params(raw_params):
+    if not raw_params:
+        return None
+
+    cleaned = raw_params.strip()
+    if not cleaned:
+        return None
+
+    parsed = {}
+    for chunk in [p.strip() for p in cleaned.split(";") if p.strip()]:
+        if "=" not in chunk:
+            raise ValueError(
+                f"Invalid --dada2_params entry '{chunk}'. Use key=value pairs separated by ';', "
+                "for example 'truncLen=c(240,200);maxEE=c(2,2)'."
+            )
+        key, value = chunk.split("=", 1)
+        parsed[key.strip()] = value.strip()
+
+    missing = [key for key in ("truncLen", "maxEE") if key not in parsed]
+    if missing:
+        raise ValueError(
+            "When --dada2_params is used, both truncLen and maxEE must be provided. "
+            f"Missing: {', '.join(missing)}."
+        )
+    return cleaned
+
+
+def validate_paired_samples(parsed_files, input_dir):
+    sample_to_directions = {}
+    sample_to_files = {}
+    for file_path, file_name, sample, direction in parsed_files:
+        sample_to_directions.setdefault(sample, set()).add(direction)
+        sample_to_files.setdefault(sample, {})[direction] = file_name
+
+    invalid = {
+        sample: sorted(directions)
+        for sample, directions in sample_to_directions.items()
+        if directions != {1, 2}
+    }
+    if invalid:
+        normalized_groups = {}
+        for sample, directions in invalid.items():
+            normalized = re.sub(r"[-_]+", "", sample).lower()
+            normalized_groups.setdefault(normalized, []).append((sample, directions))
+
+        probable_pair_typos = []
+        for normalized, members in sorted(normalized_groups.items()):
+            seen_directions = set()
+            for _, directions in members:
+                seen_directions.update(directions)
+            if seen_directions == {1, 2} and len(members) > 1:
+                details = []
+                for sample, directions in members:
+                    direction_labels = ",".join(f"R{direction}" for direction in directions)
+                    file_labels = ", ".join(
+                        sample_to_files.get(sample, {}).get(direction, f"{sample} (missing R{direction})")
+                        for direction in sorted(directions)
+                    )
+                    details.append(f"{sample} -> {direction_labels} [{file_labels}]")
+                probable_pair_typos.append("; ".join(details))
+
+        if probable_pair_typos:
+            raise ValueError(
+                f"Input directory '{input_dir}' contains read pairs with inconsistent sample naming. "
+                "AmpWrap detected likely R1/R2 pair typos caused by separators or small basename differences, for example '_' vs '-'. "
+                f"Details: {' | '.join(probable_pair_typos)}"
+            )
+
+        details = "; ".join(
+            f"{sample} has directions {dirs}" for sample, dirs in sorted(invalid.items())
+        )
+        raise ValueError(
+            f"Input directory '{input_dir}' does not contain valid paired-end files for all samples: {details}. "
+            "Each sample must have exactly one R1 file and one R2 file."
+        )
+
+
 def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amplen, db_choice,
-metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untrimmed, dry_run_tune, dada2_params=None):
+metainfo, extension, figaro_name, trim_primers_dada2, disable_discard_untrimmed, dry_run_tune,
+dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
+asv_length_mode="off", asv_length_tolerance=None, asv_length_min=None, asv_length_max=None, bigdata_mode=False,
+dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced", species=False,
+remove_organelle_phyloseq=False):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -129,18 +346,39 @@ metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untri
         "amplicon_length": amplen,
         "assign_taxonomy_method": db_choice,
         "sample_tab": os.path.join(output_dir, "sample.tab"),
+        "db_dir": db_dir if db_dir else default_db_dir(),
         "read": [1, 2],
         "sample": [f[1].split(".")[0] for f in metainfo],
         "script": "script",
-        "logs": "logs",
+        "logs": os.path.join(output_dir, "logs"),
         "file_extension": extension,
         "figaro_name": figaro_name,
         "dada2_params": dada2_params if dada2_params else "",
+        "loess_model": loess_model if loess_model else "auto",
+        "analysis_start": datetime.datetime.now().isoformat(timespec="seconds"),
         "dada2_source": "user" if dada2_params else "figaro",
-        "cutadapt_trim_by_length": cutadapt_trim_by_length,
+        "max_reads_per_sample": max_reads_per_sample if max_reads_per_sample else 0,
+        "asv_length_mode": asv_length_mode,
+        "trim_primers_dada2": bool(trim_primers_dada2),
         "disable_discard_untrimmed": disable_discard_untrimmed,
-        "dry_run_tune": dry_run_tune
+        "dry_run_tune": dry_run_tune,
+        "threads": threads if threads not in (None, "all") else os.cpu_count(),
+        "bigdata_mode": bool(bigdata_mode),
+        "resource_profile": resource_profile,
+        "species_assignment": bool(species),
+        "remove_organelle_phyloseq": bool(remove_organelle_phyloseq),
     }
+    if dada2_trim_left is not None:
+        config["dada2_trim_left"] = ",".join(str(v) for v in dada2_trim_left)
+    if dada2_trim_right is not None:
+        config["dada2_trim_right"] = ",".join(str(v) for v in dada2_trim_right)
+
+    if asv_length_min is not None and asv_length_max is not None:
+        config["asv_length_min"] = int(asv_length_min)
+        config["asv_length_max"] = int(asv_length_max)
+    elif asv_length_tolerance is not None:
+        config["asv_length_min"] = max(1, int(amplen) - int(asv_length_tolerance))
+        config["asv_length_max"] = int(amplen) + int(asv_length_tolerance)
 
     config_path = os.path.join(output_dir, "config.yaml")
     with open(config_path, "w") as f:
@@ -148,9 +386,10 @@ metainfo, extension, figaro_name, cutadapt_trim_by_length, disable_discard_untri
 
     return config_path
 
-def run_snakemake(config_path, is_quiet=False,until=None):
+def run_snakemake(config_path, is_quiet=False, until=None, cores="all"):
     conda_bin_dir = os.path.join(os.environ['CONDA_PREFIX'], 'bin')
-    snakefile_path = os.path.join(conda_bin_dir, 'snakefile.short')
+    local_snakefile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'snakefile.short')
+    snakefile_path = local_snakefile_path if os.path.exists(local_snakefile_path) else os.path.join(conda_bin_dir, 'snakefile.short')
 
     print(f"Search Snakefile in: {snakefile_path}")
     if not os.path.exists(snakefile_path):
@@ -160,8 +399,9 @@ def run_snakemake(config_path, is_quiet=False,until=None):
     args = [
         "snakemake",
         "--configfile", config_path,
-        "--cores", "all",
+        "--cores", str(cores),
         "--nolock",
+        "--show-failed-logs",
         "--snakefile", snakefile_path
     ]
 
@@ -173,8 +413,54 @@ def run_snakemake(config_path, is_quiet=False,until=None):
 
     print("Let's Go:", " ".join(args))
 
+    progress_pattern = re.compile(r"(?P<done>\d+)\s+of\s+(?P<total>\d+)\s+steps")
+
+    def render_progress(done, total):
+        width = 28
+        ratio = 0 if total <= 0 else max(0.0, min(1.0, done / total))
+        filled = int(round(width * ratio))
+        bar = "#" * filled + "-" * (width - filled)
+        return f"[{bar}] {ratio * 100:5.1f}% ({done}/{total})"
+
     try:
-        subprocess.run(args, check=True)
+        if is_quiet:
+            subprocess.run(args, check=True)
+            return
+
+        process = subprocess.Popen(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        last_progress = None
+        is_tty = sys.stdout.isatty()
+        assert process.stdout is not None
+        for line in process.stdout:
+            match = progress_pattern.search(line)
+            if match:
+                done = int(match.group("done"))
+                total = int(match.group("total"))
+                progress_line = render_progress(done, total)
+                last_progress = progress_line
+                if is_tty:
+                    print(f"\r{progress_line}", end="", flush=True)
+                else:
+                    print(progress_line)
+                continue
+
+            if is_tty and last_progress is not None:
+                print()
+                last_progress = None
+            print(line, end="")
+
+        return_code = process.wait()
+        if is_tty and last_progress is not None:
+            print()
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, args)
     except subprocess.CalledProcessError as e:
         print(f"ERROR in Snakemake: {e}")
         sys.exit(1)
@@ -195,21 +481,160 @@ def main():
     print_banner()
 
     parser = argparse.ArgumentParser(
-        description="ampwrap_short: process raw sequencing files and assign taxonomy."
+        description=(
+            "ampwrap short: process paired-end Illumina amplicon reads and assign taxonomy.\n\n"
+            "Supported input naming:\n"
+            "  Custom:    sample_R1.fastq.gz / sample_R2.fastq.gz\n"
+            "  Illumina:  sample_S1_L001_R1_001.fastq.gz / sample_S1_L001_R2_001.fastq.gz"
+        ),
+        prog=f"ampwrap short ({load_ampwrap_version()})",
+        formatter_class=ReadableHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  ampwrap short -i reads_dir -a FORWARD -A REVERSE -l 372\n"
+            "  ampwrap short -i run1 run2 -a FORWARD -A REVERSE -l 372 --trim-primers-dada2\n"
+            "  ampwrap short -i reads_dir -a FORWARD -A REVERSE \\\n"
+            "    --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'\n"
+            "  ampwrap short -i reads_dir -a FORWARD -A REVERSE -l 372 \\\n"
+            "    --loess_model auto --max-reads-per-sample 200000 --cores 4"
+        ),
     )
-    parser.add_argument("-i", "--input_directory", nargs="+",
-			help="Input directory with raw fq/fq.gz/fastq/fastq.gz files, add multiple space-separated paths for multiple runs e.g. -i path/to/run1 path/to/run2 path/to/run3")
-    parser.add_argument("-a", "--forward_primer",  help="Forward primer sequence")
-    parser.add_argument("-A", "--reverse_primer",  help="Reverse primer sequence")
-    parser.add_argument("-o", "--output_directory", default=os.path.join(os.getcwd(), "ampwrap_short"), help="Output directory (default: ./ampwrap_short)")
-    parser.add_argument("-l", "--amplen", type=int, help="Length of the amplified sequence target (not including primers-->e.g., R926 - F515 = 411 - pF19 - pR20 = 372)")
-    parser.add_argument("-d", "--db_choice", default="dada2_silva_genus138", help="Database for taxonomy assignment. Choices:\n" + "\n".join(DB_CHOICES))
-    parser.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
-    parser.add_argument("--db-info", action="store_true", help="Show available databases and exit")
-    parser.add_argument("--cutadapt_trim_by_length",help="Cutadapt trim primers by length",action="store_true",default=False)
-    parser.add_argument("--cutadapt_disable_discard_untrimmed",help="Deactivate cutadapt option --discard-untrimmed",action="store_true",default=False)
-    parser.add_argument("--dada2_params",type=str,help="Semicolon-separated list of DADA2 parameters to override Figaro (e.g., 'truncLen=c(240,200);maxEE=c(2,2)'")
-    parser.add_argument("--dry-run-tune", action="store_true", help="Run only Figaro tuning and show first 5 results, then clean up")
+    required = parser.add_argument_group("required arguments")
+    required.add_argument(
+        "-i", "--input_directory", nargs="+",
+        help=(
+            "Input directory with raw FASTQ files.\n"
+            "Provide multiple paths for multiple runs, for example:\n"
+            "  -i path/to/run1 path/to/run2 path/to/run3"
+        ),
+    )
+    required.add_argument("-a", "--forward_primer",  help="Forward primer sequence")
+    required.add_argument("-A", "--reverse_primer",  help="Reverse primer sequence")
+
+    general = parser.add_argument_group("general options")
+    general.add_argument("-o", "--output_directory", default=default_short_output_dir(), help="Output directory")
+    general.add_argument(
+        "--db-dir",
+        default=default_db_dir(),
+        help=(
+            "Directory that stores downloaded taxonomy databases.\n"
+            "Defaults to AMPWRAP_DB_DIR if set, otherwise ~/.ampwrap/db."
+        ),
+    )
+    general.add_argument(
+        "-d", "--db_choice", default="dada2_silva_genus138",
+        help="Database for taxonomy assignment.\nChoices:\n" + "\n".join(f"  - {choice}" for choice in DB_CHOICES),
+    )
+    general.add_argument(
+        "--species",
+        action="store_true",
+        help=(
+            "Add optional 16S species-level assignments with DADA2 addSpecies.\n"
+            "Supported only for dada2_silva_genus138 and dada2_RDP_genus19."
+        ),
+    )
+    general.add_argument(
+        "--remove-organelle-phyloseq",
+        action="store_true",
+        help=(
+            "Save an additional phyloseq object filtered for chloroplast and mitochondria taxa.\n"
+            "The original phyloseq object is always retained."
+        ),
+    )
+    general.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
+    general.add_argument("--db-info", action="store_true", help="Show available databases and exit")
+    general.add_argument(
+        "--bigdata", action="store_true",
+        help=(
+            "Apply safer defaults for very deep datasets.\n"
+            "Enables the sample-wise streaming DADA2 inference path and limits cores if not specified."
+        ),
+    )
+
+    denoising = parser.add_argument_group("denoising and trimming")
+    denoising.add_argument(
+        "-l", "--amplen", type=int,
+        help=(
+            "Amplicon length excluding primers.\n"
+            "Required unless --dada2_params provides explicit truncLen and maxEE.\n"
+            "Example: R926 - F515 = 411; pF19 - pR20 = 372"
+        ),
+    )
+    denoising.add_argument(
+        "--trim-primers-dada2",
+        action="store_true",
+        help=(
+            "Trim primers during DADA2 filtering using trimLeft/trimRight.\n"
+            "Defaults to primer lengths for trimLeft and 0,0 for trimRight."
+        ),
+    )
+    denoising.add_argument(
+        "--dada2-trim-left",
+        type=lambda value: parse_trim_pair(value, "--dada2-trim-left"),
+        help="Comma-separated trimLeft values for forward and reverse reads, e.g. 19,20.",
+    )
+    denoising.add_argument(
+        "--dada2-trim-right",
+        type=lambda value: parse_trim_pair(value, "--dada2-trim-right"),
+        help="Comma-separated trimRight values for forward and reverse reads, e.g. 0,0.",
+    )
+    denoising.add_argument("--cutadapt_trim_by_length", help=argparse.SUPPRESS, action="store_true", default=False)
+    denoising.add_argument("--cutadapt_disable_discard_untrimmed",help="Disable cutadapt --discard-untrimmed",action="store_true",default=False)
+    denoising.add_argument(
+        "--dada2_params", type=str,
+        help=(
+            "Semicolon-separated DADA2 parameters that bypass Figaro.\n"
+            "Required keys: truncLen and maxEE.\n"
+            "Example: 'truncLen=c(240,200);maxEE=c(2,2)'"
+        ),
+    )
+    denoising.add_argument("--dry-run-tune", action="store_true", help="Run only Figaro tuning, show first 5 results, then clean up")
+    denoising.add_argument(
+        "--loess_model", type=str, choices=["auto", "vanilla", "1", "2", "3", "4"], default="auto",
+        help=(
+            "DADA2 error-learning mode.\n"
+            "'auto' detects binned qualities and selects one shared model for forward/reverse.\n"
+            "'vanilla' keeps standard DADA2."
+        ),
+    )
+    denoising.add_argument(
+        "--max-reads-per-sample", type=parse_max_reads,
+        help=(
+            "Cap reads per sample before QC/trimming.\n"
+            "Use an integer for a fixed cap."
+        ),
+    )
+    denoising.add_argument(
+        "--asv-length",
+        type=parse_asv_length_spec,
+        help=(
+            "ASV length filter applied after chimera removal.\n"
+            "Use 'auto' to keep ASVs around the dominant observed length, or MIN:MAX for an explicit range."
+        ),
+    )
+    denoising.add_argument(
+        "--asv-length-tolerance", type=parse_asv_length_tolerance,
+        help=argparse.SUPPRESS,
+    )
+    denoising.add_argument(
+        "--asv-length-min",
+        type=lambda value: parse_nonnegative_int(value, "--asv-length-min"),
+        help=argparse.SUPPRESS,
+    )
+    denoising.add_argument(
+        "--asv-length-max",
+        type=lambda value: parse_nonnegative_int(value, "--asv-length-max"),
+        help=argparse.SUPPRESS,
+    )
+
+    execution = parser.add_argument_group("execution")
+    execution.add_argument("-c", "--cores", type=parse_cores, default="all", help="Limit Snakemake cores")
+    execution.add_argument(
+        "--resource-profile",
+        type=parse_resource_profile,
+        default="balanced",
+        help="Per-step CPU profile: safe, balanced, or aggressive.",
+    )
 
     args = parser.parse_args()
 
@@ -228,14 +653,86 @@ def main():
     is_quiet = args.quiet
     disable_discard_untrimmed = args.cutadapt_disable_discard_untrimmed
     dry_run_tune = args.dry_run_tune
-    cutadapt_trim_by_length = args.cutadapt_trim_by_length
+    cores = args.cores
 
-    if args.dada2_params:
-        dada2_params = args.dada2_params.strip()
-        use_custom_dada2 = True
-    else:
-        dada2_params = None
-        use_custom_dada2 = False
+    if args.bigdata:
+        if cores == "all":
+            cores = 4
+        print(f"INFO: --bigdata enabled, using cores={cores}")
+
+    try:
+        dada2_params = validate_dada2_params(args.dada2_params)
+    except ValueError as exc:
+        print(f"ERROR: {exc}")
+        sys.exit(1)
+    use_custom_dada2 = bool(dada2_params)
+
+    if args.cutadapt_trim_by_length:
+        print(
+            "ERROR: --cutadapt_trim_by_length has been deprecated.\n"
+            "Use --trim-primers-dada2 to trim primers with DADA2 trimLeft/trimRight instead."
+        )
+        sys.exit(1)
+
+    trim_primers_dada2 = args.trim_primers_dada2 or args.dada2_trim_left is not None or args.dada2_trim_right is not None
+    dada2_trim_left = args.dada2_trim_left
+    dada2_trim_right = args.dada2_trim_right
+    if trim_primers_dada2:
+        if dada2_trim_left is None:
+            dada2_trim_left = (len(args.forward_primer), len(args.reverse_primer))
+        if dada2_trim_right is None:
+            dada2_trim_right = (0, 0)
+
+    asv_length_mode = "off"
+    asv_length_min = None
+    asv_length_max = None
+    if args.asv_length is not None and (
+        args.asv_length_tolerance is not None or args.asv_length_min is not None or args.asv_length_max is not None
+    ):
+        print("ERROR: use either --asv-length or the legacy ASV length options, not both.")
+        sys.exit(1)
+
+    if args.asv_length is not None:
+        asv_length_mode, parsed_min, parsed_max = args.asv_length
+        asv_length_min = parsed_min
+        asv_length_max = parsed_max
+    elif args.asv_length_tolerance is not None:
+        asv_length_mode = "range"
+        asv_length_min = max(1, int(args.amplen) - int(args.asv_length_tolerance))
+        asv_length_max = int(args.amplen) + int(args.asv_length_tolerance)
+    elif args.asv_length_min is not None or args.asv_length_max is not None:
+        if (args.asv_length_min is None) ^ (args.asv_length_max is None):
+            print("ERROR: --asv-length-min and --asv-length-max must be provided together.")
+            sys.exit(1)
+        if args.asv_length_min > args.asv_length_max:
+            print("ERROR: --asv-length-min cannot be greater than --asv-length-max.")
+            sys.exit(1)
+        asv_length_mode = "range"
+        asv_length_min = args.asv_length_min
+        asv_length_max = args.asv_length_max
+
+    if not use_custom_dada2 and args.amplen is None:
+        print("ERROR: -l/--amplen is required unless --dada2_params provides explicit truncLen/maxEE.")
+        sys.exit(1)
+
+    if args.species and args.db_choice not in SPECIES_SUPPORTED_DB_CHOICES:
+        print(
+            "ERROR: --species is currently supported only for "
+            "dada2_silva_genus138 and dada2_RDP_genus19."
+        )
+        sys.exit(1)
+
+    if len(input_dirs) > 1 and not trim_primers_dada2:
+        print(
+            Fore.YELLOW
+            + (
+                "\nMULTIRUN NOTICE:\n"
+                "Consistent primer trimming is strongly recommended for multiple runs because ASVs are merged by final sequence.\n"
+                "Differences in DADA2 truncation can be acceptable if the amplicon still merges correctly, but inconsistent primer removal is not.\n"
+                "Recommended option: --trim-primers-dada2\n"
+            )
+            + Style.RESET_ALL
+        )
 
     # if it is dry-run,new temp directory
     temp_output_dir = None
@@ -252,11 +749,12 @@ def main():
 
 
     metainfo = []
+    seen_run_names = set()
 
-    for i,input_dir in enumerate(input_dirs,1):
+    for input_dir in input_dirs:
         print(f"\n🔹 Processing run: {input_dir}")
 
-        run_name = f"run_{i}" #os.path.basename(os.path.normpath(input_dir))
+        run_name = ensure_unique_run_name(sanitize_run_name(input_dir), seen_run_names)
         run_output_dir = output_dir
         os.makedirs(run_output_dir, exist_ok=True)
 
@@ -269,31 +767,53 @@ def main():
             if re.search(r"_[Rr][12](?:_|\.)", file)
         ]
         if not files:
-            print(f" No matching files found in {input_dir}, skipping.")
-            continue
+            print(
+                f"ERROR: No FASTQ files with recognizable read suffixes were found in '{input_dir}'. "
+                "Expected paired-end names containing '_R1'/'_R2', for example "
+                "'sample_R1.fastq.gz' and 'sample_R2.fastq.gz' or Illumina-style "
+                "'sample_S1_L001_R1_001.fastq.gz'."
+            )
+            sys.exit(1)
 
         extension = '.'.join(os.path.basename(files[0]).split('.')[1:])
 
         figaro_name = None
+        parsed_run_files = None
+        parser_errors = []
         for fxn in (IlluminaStandard, FVieiraStandard):
                 try:
-                        metainfo += [(*fxn(f),run_name) for f in files]
-                except ValueError:
+                        parsed_run_files = [fxn(f) for f in files]
+                except ValueError as exc:
+                        parser_errors.append(f"{fxn.__name__}: {exc}")
                         continue
                 else:
+                        figaro_name = fxn.__name__
                         break
 
-        if not metainfo:
-            print(f"ERROR: Files in {input_dir} do not follow any recognized naming convention.")
-            continue
+        if not parsed_run_files:
+            print(
+                f"ERROR: Files in '{input_dir}' do not follow a supported paired-end naming convention.\n"
+                "Supported examples:\n"
+                "  - Custom: sample_R1.fastq.gz / sample_R2.fastq.gz\n"
+                "  - Illumina: sample_S1_L001_R1_001.fastq.gz / sample_S1_L001_R2_001.fastq.gz\n"
+                f"Parser details: {' | '.join(parser_errors) if parser_errors else 'no parser matched'}"
+            )
+            sys.exit(1)
+
+        try:
+            validate_paired_samples(parsed_run_files, input_dir)
+        except ValueError as exc:
+            print(f"ERROR: {exc}")
+            sys.exit(1)
+
+        metainfo.extend([(*record, run_name, figaro_name) for record in parsed_run_files])
 
     sample_tab_path = os.path.join(run_output_dir, "sample.tab")
     with open(sample_tab_path, "w") as sf:
         for t in metainfo:
-            file_path, fileName, sample, direction, run_name = t
+            file_path, fileName, sample, direction, run_name, parser_name = t
             file_path = os.path.abspath(file_path)
-            figaro_name = fxn.__name__
-            sf.write(f"{sample} {direction} {file_path} {fxn.__name__} {run_name}\n")
+            sf.write(f"{sample} {direction} {file_path} {parser_name} {run_name}\n")
 
     config_path = write_config_yaml(
                 input_dir=input_dir,
@@ -305,11 +825,25 @@ def main():
                 metainfo=metainfo,
                 extension=extension,
                 figaro_name=figaro_name,
-                cutadapt_trim_by_length=cutadapt_trim_by_length,
+                trim_primers_dada2=trim_primers_dada2,
                 disable_discard_untrimmed=disable_discard_untrimmed,
                 dry_run_tune=dry_run_tune,
-                dada2_params=dada2_params)
-    run_snakemake(config_path, is_quiet)
+                dada2_params=dada2_params,
+                threads=cores,
+                loess_model=args.loess_model,
+                max_reads_per_sample=args.max_reads_per_sample,
+                db_dir=args.db_dir,
+                asv_length_mode=asv_length_mode,
+                asv_length_tolerance=args.asv_length_tolerance,
+                asv_length_min=asv_length_min,
+                asv_length_max=asv_length_max,
+                bigdata_mode=args.bigdata,
+                dada2_trim_left=dada2_trim_left,
+                dada2_trim_right=dada2_trim_right,
+                resource_profile=args.resource_profile,
+                species=args.species,
+                remove_organelle_phyloseq=args.remove_organelle_phyloseq)
+    run_snakemake(config_path, is_quiet, cores=cores)
 
 
 if __name__ == "__main__":

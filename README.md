@@ -100,6 +100,22 @@ Install AmpWrap
 conda activate ampwrap
 bash setup.sh
 ```
+
+### Build a Conda package
+AmpWrap now ships with a local conda recipe in [conda-recipe/meta.yaml](/home/ebosi/AmpWrap/conda-recipe/meta.yaml).
+
+Build it with:
+```sh
+conda build conda-recipe
+```
+
+or, if you use `boa`:
+```sh
+mambabuild conda-recipe
+```
+
+The package version is read from `ampwrap/VERSION`, which is also the version shown in the launcher help and final reports.
+
 or 
 ## Install with docker
 ```sh
@@ -148,6 +164,49 @@ S1_r1.fq.gz
 S1_r2.fq.gz
 ```
 
+If input files do not follow one of these paired-end conventions, AmpWrap reports the expected formats explicitly and shows which parser failed.
+
+AmpWrap short also aborts early if it detects likely mate-pair typos where `R1` and `R2` only differ by small basename edits, for example:
+
+```text
+sample_A_R1.fastq.gz
+sample-A_R2.fastq.gz
+```
+
+This avoids silent pairing mistakes caused by `_` vs `-` or similar accidental renaming differences.
+
+## Database cache
+
+AmpWrap now uses a central database cache by default instead of copying databases into each clone or conda environment.
+
+- Short-read taxonomy databases default to `~/.ampwrap/db`
+- Long-read EMU databases default to `~/.ampwrap/db/emu`
+- You can override the location with `--db-dir`
+- You can also set `AMPWRAP_DB_DIR` globally
+
+Downloaded databases are tracked in a small manifest file:
+
+```text
+~/.ampwrap/db/manifest.tsv
+```
+
+The manifest stores:
+
+- category
+- name
+- filename
+- md5
+- source_url
+- local_path
+- last_checked
+
+You can inspect the cache with:
+
+```sh
+ampwrap db list
+ampwrap db list --category dada2
+```
+
 ## AmpWrap for Short Reads (Illumina)
 To process short-read 16S rRNA gene data from Illumina sequencing:
 ##  Workflow
@@ -164,12 +223,139 @@ Basic usage:
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon_length
 ```
 
+If `-o/--output_directory` is omitted, AmpWrap creates a timestamped output directory, for example:
+
+```text
+ampwrap_short_20260331_114500
+```
+
+Optional 16S species-level annotation with exact matching:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l amplicon_length --species
+```
+`--species` adds a DADA2 `addSpecies(...)` step after genus-level assignment. It is currently supported only for `dada2_silva_genus138` and `dada2_RDP_genus19`, and it uses exact matching only.
+
+If you want to skip FIGARO and provide DADA2 trimming/filtering parameters directly:
+```sh
+ampwrap short \
+  -i input_directory \
+  -a forward_primer \
+  -A reverse_primer \
+  --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'
+```
+
+When `--dada2_params` is used, both `truncLen` and `maxEE` are required and `-l` is no longer mandatory.
+
 Multiple Run usage:
 ```sh
-ampwrap short -i input_directory1 input_directory2 -a forward_primer -A reverse_primer -l amplicon_length --cutadapt_trim_by_length
+ampwrap short -i input_directory1 input_directory2 -a forward_primer -A reverse_primer -l amplicon_length --trim-primers-dada2
 ```
-In multiple runs mode, we recommend trimming primers using --cutadapt_trim_by_length to ensure primers are trimmed to a fixed length. 
-This helps avoid extra nucleotides in the representative sequences, which could prevent ASV merging due to variability introduced by Cutadapt
+In multiple-run mode, we recommend `--trim-primers-dada2` so primer removal is consistent across runs before ASV comparison and merging.
+ASVs are merged by final sequence, so inconsistent primer removal is more problematic than differences in DADA2 truncation when the amplicon still merges correctly.
+
+In multiple-run mode, run folders are named after the input directory basenames instead of generic `run_1`, `run_2`, etc.
+
+### Additional useful options
+
+Species-level assignment for supported 16S DADA2 databases:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 -d dada2_silva_genus138 --species
+```
+
+Automatic/shared error model selection for binned qualities:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --loess_model auto
+```
+
+Force a specific error model:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --loess_model 1
+```
+
+
+Cap very deep libraries before QC/trimming:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --max-reads-per-sample 200000
+```
+
+This is useful for oversized NovaSeq metabarcoding libraries when you want to keep a reproducible random subset of reads and reduce runtime and memory usage.
+
+Use `--max-reads-per-sample` only as an explicit fixed cap when you want to downsample very deep libraries before QC and denoising.
+
+Convenience profile for very large runs:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --bigdata
+```
+
+`--bigdata` currently enables safer defaults for deep datasets and uses the streaming-style sample inference workflow.
+
+Without `--bigdata`, AmpWrap keeps the standard DADA2-style inference path.
+
+Optional ASV length filter after merging/chimera removal:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length auto
+```
+
+This keeps ASVs around the dominant observed length and warns if the dominant length differs substantially from the expected amplicon length.
+
+Explicit ASV length range:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --asv-length 360:385
+```
+
+This is useful when you want to retain only ASVs within a user-defined sequence-length interval after chimera removal.
+
+Optional organelle-filtered phyloseq outputs:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --remove-organelle-phyloseq
+```
+
+This keeps the standard outputs unchanged and additionally writes:
+- `phyloseq_object_no_organelle.rds`
+- `ASVs_counts_no_organelle.tsv`
+- `ASVs_taxonomy_no_organelle.tsv`
+- `ASVs_no_organelle.biom`
+
+Accepted short-read input names:
+```text
+Custom:   sample_R1.fastq.gz / sample_R2.fastq.gz
+Illumina: sample_S1_L001_R1_001.fastq.gz / sample_S1_L001_R2_001.fastq.gz
+```
+
+Supported extensions are `.fq`, `.fq.gz`, `.fastq`, and `.fastq.gz`.
+
+Resource profiles:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --resource-profile balanced -c 8
+```
+
+Available profiles are `safe`, `balanced`, and `aggressive`.
+They increase CPU usage on preprocessing and QC steps while keeping DADA2-related steps more conservative.
+
+Store databases in a stable shared directory:
+```sh
+ampwrap short \
+  -i input_directory \
+  -a forward_primer \
+  -A reverse_primer \
+  -l 372 \
+  --db-dir /path/to/shared_ampwrap_db
+```
+
+If `AMPWRAP_DB_DIR` is set, AmpWrap short uses it automatically.
+
+Readable command-line help:
+```sh
+ampwrap short --help
+```
+
+The short-read parser is grouped by topic:
+- required arguments
+- general options
+- denoising and trimming
+- execution
+
+This makes it easier to distinguish mandatory inputs from optional DADA2, downsampling, and runtime controls.
 
 
 ## Short reads Test Usage
@@ -198,9 +384,9 @@ If the test goes smoothly you are ready to analyze your data
 
 | Database Name        | Source   | Version / Date | File Name                                | MD5                              | Download Link                                                                                            |
 | -------------------- | -------- | -------------- | ---------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| SILVA SSU r138.2     | DECIPHER | 2024           | SILVA_SSU_r138_2_2024.RData              | 4e272e39c2d71f5d3e7a31b00dbb1df4 | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/SILVA_SSU_r138_2_2024.RData)                      |
-| GTDB r226            | DECIPHER | April 2025     | GTDB_r226-mod_April2025.RData            | 2aca8a1cfc4c8357a61eb51413f4e476 | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/GTDB_r226-mod_April2025.RData)                    |
-| RDP v18              | DECIPHER | July 2020      | RDP_v18-mod_July2020.RData               | e0e8ed5bc34b28ab416df2d7fc1568ec | [Download](https://www2.decipher.codes/data/Downloads/TrainingSets/RDP_v18-mod_July2020.RData)                       |
+| SILVA SSU r138.2     | DECIPHER | 2024           | SILVA_SSU_r138.2_v2.RData                | ed0b7e62542cd5615fb77ef15bcb9de0 | [Download](https://drive.usercontent.google.com/download?export=download&id=11YYCiB-gJqAP7-wIu35smorelLE-7IgJ&confirm=t) |
+| GTDB r226            | DECIPHER | April 2025     | GTDB_r226_classifier.RData               | 2aca8a1cfc4c8357a61eb51413f4e476 | [Download](https://drive.usercontent.google.com/download?export=download&id=1wMS2jskFeI9RGXn3fBO_yyvciiB8PMu0&confirm=t) |
+| RDP v18              | DECIPHER | July 2020      | RDP_TrainingSet_v18.RData                | af228a61cf5c382e847770c53a8d531b | [Download](https://drive.usercontent.google.com/download?export=download&id=1AsgpYQtheSuZbFkOD9HFZZm81A-IM5UO&confirm=t) |
 | RDP v19              | DADA2    | 2023-08-23     | rdp_19_toGenus_trainset.fa.gz            | 390b8a359c45648adf538e72a1ee7e28 | [Download](https://zenodo.org/records/14168771/files/rdp_19_toGenus_trainset.fa.gz?download=1)                       |
 | SILVA v138.2         | DADA2    | 2025           | silva_nr99_v138.2_toGenus_trainset.fa.gz | 1764e2a36b4500ccb1c7d5261948a414 | [Download](https://zenodo.org/records/16777407/files/silva_nr99_v138.2_toGenus_trainset.fa.gz?download=1)            |
 | RefSeq+RDP v16       | DADA2    | 2020-06-11     | RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz    | 53aac0449c41db387d78a3c17b06ad07 | [Download](https://zenodo.org/records/4735821/files/RefSeq_16S_6-11-20_RDPv16_Genus.fa.gz?download=1)                |
@@ -211,6 +397,12 @@ If the test goes smoothly you are ready to analyze your data
 
 
 ## AmpWrap for Long Reads (Nanopore)
+If `-o/--output-directory` is omitted, AmpWrap creates a timestamped output directory, for example:
+
+```text
+ampwrap_long_20260331_114500
+```
+
 For long-read 16S rRNA gene data from Nanopore sequencing, use:
 ## Workflow
 1. Initial quality control with [FastQC](https://github.com/s-andrews/FastQC) and QC report generation with [MultiQC](https://github.com/MultiQC/MultiQC)
@@ -225,6 +417,17 @@ Basic usage:
 ```sh
 ampwrap long -i input_directory -o output_directory
 ```
+
+Database notes for `ampwrap long`:
+- the default EMU cache is `~/.ampwrap/db/emu`
+- you can override it with `--db-dir`
+- `ampwrap long --help` prints the active default path
+- PR2 prebuilt EMU databases are normalized internally to the canonical EMU layout required by `emu abundance`
+
+Long-read sample naming:
+- input sample names are derived from the FASTQ basename after stripping `.fastq`, `.fq`, `.fastq.gz`, or `.fq.gz`
+- intermediate filenames may still contain `-nanofilt` or `-scrubbed`
+- final sample names in the report and in `emu_phyloseq.rds` are written without those suffixes
 ## Long reads Test Usage
 You can use a small toy sequencing run to test AmpWrap
 ```sh
@@ -320,5 +523,52 @@ No reads passed the filter. Please revisit your filtering parameters.
 ```
 To avoid this issue, ensure that the chosen -l value aligns with the expected fragment lengths in your dataset.
 For amplicons with some expected biological variation in length, use the longest expected size
- 
 
+### Input naming errors
+
+AmpWrap short only accepts paired-end FASTQ files that match one of the supported naming conventions.
+
+Accepted examples:
+```text
+sample_R1.fastq.gz
+sample_R2.fastq.gz
+
+sample_S1_L001_R1_001.fastq.gz
+sample_S1_L001_R2_001.fastq.gz
+```
+
+If a directory does not contain valid pairs, AmpWrap now reports:
+- that no recognizable `_R1` / `_R2` FASTQ files were found, or
+- that the parser could not match the supported formats, or
+- which sample is missing an `R1` or `R2` mate
+- when `R1` and `R2` look like the same sample except for small naming differences, that AmpWrap detected a probable pair typo
+
+### Manual DADA2 parameters
+
+If you pass `--dada2_params`, both `truncLen` and `maxEE` must be present, for example:
+
+```sh
+ampwrap short \
+  -i input_directory \
+  -a FORWARD \
+  -A REVERSE \
+  --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'
+```
+
+In this mode `-l` is not required, because FIGARO is bypassed.
+
+### Very deep NovaSeq libraries
+
+For very deep libraries, you can downsample reproducibly before QC and DADA2:
+
+```sh
+ampwrap short \
+  -i input_directory \
+  -a FORWARD \
+  -A REVERSE \
+  -l 372 \
+  --max-reads-per-sample 200000
+```
+
+This is useful when the biological target typically needs around `100k-200k` reads per sample but sequencing produced much deeper libraries.
+ 

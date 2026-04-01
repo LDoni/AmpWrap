@@ -1,10 +1,22 @@
 #!/usr/bin/env Rscript
 
 suppressPackageStartupMessages({
-  library(tidyverse)
   library(phyloseq)
   library(biomformat)
 })
+
+if (length(snakemake@log) > 0) {
+  log_file <- snakemake@log[[1]]
+  dir.create(dirname(log_file), recursive = TRUE, showWarnings = FALSE)
+  log_con <- file(log_file, open = "wt")
+  sink(log_con, type = "output")
+  sink(log_con, type = "message")
+  on.exit({
+    sink(type = "message")
+    sink(type = "output")
+    close(log_con)
+  }, add = TRUE)
+}
 
 emu_dir <- snakemake@params[["emu_dir"]]
 setwd(emu_dir)
@@ -15,60 +27,57 @@ list_file <- list.files(pattern = "_rel-abundance.tsv$")
 
 if (length(list_file) == 0) stop("Nessun file '_rel-abundance.tsv' trovato!")
 
-combined_df <- list_file %>%
-  setNames(nm = gsub("^combined\\.trimmed_|_rel-abundance\\.tsv$", "", .)) %>%
-  map_dfr(~ {
-    df <- read.delim(.x, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-    df <- df[, c("superkingdom", "phylum", "class", "order", "family", "genus", "species", "abundance")]
-    df$superkingdom <- gsub("\\[|\\]", "", df$superkingdom)
-    df$phylum        <- gsub("\\[|\\]", "", df$phylum)
-    df$class         <- gsub("\\[|\\]", "", df$class)
-    df$order         <- gsub("\\[|\\]", "", df$order)
-    df$family        <- gsub("\\[|\\]", "", df$family)
-    df$genus         <- gsub("\\[|\\]", "", df$genus)
-    df$species       <- gsub("\\[|\\]", "", df$species)
-    df$sample <- gsub("^combined\\.trimmed_|_rel-abundance\\.tsv$", "", .x)
-    df
-  })
+sample_name_from_file <- function(path) {
+  gsub("(^combined\\.trimmed_|-(nanofilt|scrubbed)_rel-abundance\\.tsv$|_rel-abundance\\.tsv$)", "", path)
+}
 
+clean_rank <- function(x) {
+  x <- gsub("\\[|\\]", "", x)
+  x[is.na(x)] <- ""
+  x
+}
 
+frames <- lapply(list_file, function(path) {
+  df <- read.delim(path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+  df <- df[, c("superkingdom", "phylum", "class", "order", "family", "genus", "species", "abundance")]
+  for (col in c("superkingdom", "phylum", "class", "order", "family", "genus", "species")) {
+    df[[col]] <- clean_rank(df[[col]])
+  }
+  df$sample <- sample_name_from_file(path)
+  df
+})
 
-combined_df_clean <- combined_df %>%
-  filter(!is.na(superkingdom) & superkingdom != "") %>%
-  mutate(abundance = as.numeric(unlist(abundance)))
+combined_df <- do.call(rbind, frames)
+combined_df <- combined_df[combined_df$superkingdom != "", , drop = FALSE]
+combined_df$abundance <- as.numeric(combined_df$abundance)
+combined_df$taxon <- apply(
+  combined_df[, c("superkingdom", "phylum", "class", "order", "family", "genus", "species"), drop = FALSE],
+  1,
+  paste,
+  collapse = ";"
+)
 
+taxa_levels <- unique(combined_df$taxon)
+taxa_ids <- setNames(sprintf("OTU_%d", seq_along(taxa_levels)), taxa_levels)
+combined_df$taxa_id <- unname(taxa_ids[combined_df$taxon])
 
-combined_df_clean <- combined_df_clean %>%
-  unite(
-    taxon, superkingdom, phylum, class, order, family, genus, species,
-    sep = ";", remove = FALSE
-  ) %>%
-  group_by(taxon) %>%
-  mutate(taxa_id = paste0("OTU_", cur_group_id())) %>%
-  ungroup()
+otu_df <- xtabs(abundance ~ taxa_id + sample, data = combined_df)
+otu_mat <- matrix(
+  as.numeric(otu_df),
+  nrow = nrow(otu_df),
+  ncol = ncol(otu_df),
+  dimnames = dimnames(otu_df)
+)
+OTU <- phyloseq::otu_table(otu_mat, taxa_are_rows = TRUE)
 
-otu_df <- combined_df_clean %>%
-  select(taxa_id, sample, abundance) %>%
-  pivot_wider(
-    names_from = sample,
-    values_from = abundance,
-    values_fill = list(abundance = 0)
-  ) %>%
-  column_to_rownames("taxa_id")
+taxonomy_df <- combined_df[!duplicated(combined_df$taxa_id), c("taxa_id", "superkingdom", "phylum", "class", "order", "family", "genus", "species")]
+rownames(taxonomy_df) <- taxonomy_df$taxa_id
+taxonomy_df$taxa_id <- NULL
+TAX <- phyloseq::tax_table(as.matrix(taxonomy_df))
 
-otu_mat <- as.matrix(otu_df)
-OTU <- otu_table(otu_mat, taxa_are_rows = TRUE)
-
-TAX <- combined_df_clean %>%
-  distinct(taxa_id, .keep_all = TRUE) %>%
-  select(taxa_id, superkingdom, phylum, class, order, family, genus, species) %>%
-  column_to_rownames("taxa_id")
-
-TAX <- tax_table(as.matrix(TAX))
-
-ps <- phyloseq(OTU, TAX)
+ps <- phyloseq::phyloseq(OTU, TAX)
 
 saveRDS(ps, file = "emu_phyloseq.rds")
 
-biom_out <- make_biom(data = otu_table(ps), observation_metadata = tax_table(ps))
-write_biom(biom_out, "emu_abundance.biom")
+biom_out <- biomformat::make_biom(data = phyloseq::otu_table(ps), observation_metadata = phyloseq::tax_table(ps))
+biomformat::write_biom(biom_out, "emu_abundance.biom")
