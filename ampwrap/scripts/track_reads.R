@@ -24,6 +24,14 @@ split_by_offset <- function(x, step) {
   lapply(seq_len(step), function(i) x[seq(i, length(x), by = step)])
 }
 
+normalize_sample_name <- function(x) {
+  x <- sub("_R1_filtered\\.fq\\.gz$", "", x)
+  x <- sub("_R2_filtered\\.fq\\.gz$", "", x)
+  x <- sub("_R1_filtered\\.fastq\\.gz$", "", x, ignore.case = TRUE)
+  x <- sub("_R2_filtered\\.fastq\\.gz$", "", x, ignore.case = TRUE)
+  x
+}
+
 name_variants <- function(n) {
   v <- character()
   v <- c(v, n)
@@ -68,15 +76,20 @@ analyze_run <- function(l){
   dadaF <- sapply(dada_fwd, getN)
   dadaR <- sapply(dada_rev, getN)
   merged <- sapply(merged, getN)
-  sample_names <- names(dada_fwd)
+  sample_names <- normalize_sample_name(names(dada_fwd))
+  names(dadaF) <- sample_names
+  names(dadaR) <- sample_names
+  names(merged) <- sample_names
 
   if (!"sample" %in% colnames(summary)) {
     stop("filter_summary.tsv must contain a 'sample' column")
   }
+  summary$sample <- normalize_sample_name(summary$sample)
   if (anyDuplicated(summary$sample) && nrow(summary) == length(sample_names)) {
     summary$sample <- sample_names
   }
 
+  rownames(seqtab.nochim) <- normalize_sample_name(rownames(seqtab.nochim))
   nonchim <- rowSums(seqtab.nochim)[sample_names]
   input_vec <- sapply(sample_names, function(s) find_input_for_sample(s, summary, "reads.in"), USE.NAMES = FALSE)
 

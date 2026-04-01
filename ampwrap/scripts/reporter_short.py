@@ -79,7 +79,7 @@ def format_error_models(run_dir):
 
 
 def format_asv_length_filter(output_dir, run_dir):
-    chimera_dir = "all_runs" if len(run_dirs) > 1 else f"{os.path.basename(run_dir)}/intermediate"
+    chimera_dir = "all_runs/intermediate" if len(run_dirs) > 1 else f"{os.path.basename(run_dir)}/intermediate"
     metadata_path = os.path.join(output_dir, chimera_dir, "asv_length_filter.tsv")
     if not os.path.exists(metadata_path):
         return ""
@@ -126,12 +126,6 @@ for run_dir in run_dirs:
     need_figaro = not bool(dada2_params and str(dada2_params).strip())
     figaro_files = glob.glob(os.path.join(run_dir, "intermediate/figaro/trimParameters.json")) if need_figaro else []
 
-    print(f"DEBUG: Run {os.path.basename(run_dir)}")
-    print(f"  Cutadapt: {cutadapt_log_files}")
-    print(f"  DADA2: {dada2_files}")
-    print(f"  Figaro: {figaro_files} (needed={need_figaro})")
-
-    # FIX: controlla figaro_files solo se serve
     if not cutadapt_log_files or not dada2_files or (need_figaro and not figaro_files):
         raise FileNotFoundError(
             f"Missing files in {run_dir}:\n"
@@ -218,7 +212,7 @@ for r in run_reports:
         if not error_model_lines and loess_model != "NA":
             error_model_lines = f"loess_model: {loess_model}\n"
         parameters = f"""
-### DADA2 Figaro parameters
+### DADA2 optimizer parameters
 trim_position: {r['trim_position']}
 max_expected_error: {r['max_expected_error']}
 {error_model_lines}

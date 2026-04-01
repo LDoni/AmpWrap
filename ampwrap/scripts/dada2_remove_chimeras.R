@@ -67,6 +67,7 @@ if (length_mode %in% c("auto", "range") && !is.na(length_min) && !is.na(length_m
 saveRDS(seqtab_nochim, output)
 
 if (nzchar(metadata_path)) {
+  dir.create(dirname(metadata_path), recursive = TRUE, showWarnings = FALSE)
   metadata <- data.frame(
     mode = length_mode,
     dominant_length = mode_length,

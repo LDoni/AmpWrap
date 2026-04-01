@@ -11,6 +11,15 @@ class ReadableHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.Raw
     pass
 
 
+def load_ampwrap_version():
+    version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")
+    try:
+        with open(version_path) as handle:
+            return handle.read().strip()
+    except OSError:
+        return "unknown"
+
+
 def strip_fastq_extension(path):
     return re.sub(r"\.(fastq|fq)(\.gz)?$", "", os.path.basename(path), flags=re.IGNORECASE)
 
@@ -174,6 +183,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="ampwrap long: process Nanopore amplicon reads and assign taxonomy with EMU.",
+        prog=f"ampwrap long ({load_ampwrap_version()})",
         formatter_class=ReadableHelpFormatter,
         epilog=(
             "Examples:\n"

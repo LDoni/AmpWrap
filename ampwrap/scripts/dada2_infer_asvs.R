@@ -31,8 +31,28 @@ configure_parallelism <- function(value) {
 
 dada2_multithread <- configure_parallelism(thread_count_arg)
 
+sample_name_from_file <- function(path, direction) {
+  sub(paste0("_", direction, "_filtered\\.fq\\.gz$"), "", basename(path))
+}
+
 fwd <- list.files(input_dir, pattern = "_R1_filtered.fq.gz", full.names = TRUE)
 rev <- list.files(input_dir, pattern = "_R2_filtered.fq.gz", full.names = TRUE)
+
+fwd <- fwd[order(basename(fwd))]
+rev <- rev[order(basename(rev))]
+
+fwd_names <- vapply(fwd, sample_name_from_file, character(1), direction = "R1")
+rev_names <- vapply(rev, sample_name_from_file, character(1), direction = "R2")
+
+sample_names <- intersect(fwd_names, rev_names)
+if (length(sample_names) == 0) {
+  stop("No matched filtered forward/reverse sample pairs found for ASV inference")
+}
+
+fwd <- fwd[match(sample_names, fwd_names)]
+rev <- rev[match(sample_names, rev_names)]
+names(fwd) <- sample_names
+names(rev) <- sample_names
 
 err_fwd <- readRDS(err_fwd_file)
 err_rev <- readRDS(err_rev_file)

@@ -44,12 +44,19 @@ def print_rows(rows):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Inspect AmpWrap database cache metadata."
+        description=(
+            "Inspect AmpWrap database cache metadata.\n"
+            "Default cache root: ~/.ampwrap/db\n"
+            "Default manifest: ~/.ampwrap/db/manifest.tsv"
+        )
     )
     parser.add_argument(
         "--db-dir",
         default=default_db_root(),
-        help="Database root directory. Defaults to AMPWRAP_DB_DIR or ~/.ampwrap/db.",
+        help=(
+            "Database cache root directory.\n"
+            "Defaults to AMPWRAP_DB_DIR if set, otherwise ~/.ampwrap/db."
+        ),
     )
 
     subparsers = parser.add_subparsers(dest="command")

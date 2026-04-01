@@ -53,7 +53,7 @@ def parallelProcessRunner(
     logger.debug("Running import statements")
     import multiprocessing
     import inspect
-    import collections
+    from collections.abc import Iterable
 
     logger.debug("Making assertions")
     assert callable(processor), "Processor must be a callable function/method"
@@ -61,7 +61,7 @@ def parallelProcessRunner(
         len(inspect.signature(processor).parameters) == 1
     ), "Processor function must take one argument"
     assert isinstance(
-        itemsToProcess, collections.Iterable
+        itemsToProcess, Iterable
     ), "Items to process must be an iterable of some kind"
     assert coresPerProcess > 0, "Cores per process must be a positive integer"
     logger.debug("Calculating cores available")

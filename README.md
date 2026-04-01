@@ -255,12 +255,7 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --ma
 
 This is useful for oversized NovaSeq metabarcoding libraries when you want to keep a reproducible random subset of reads and reduce runtime and memory usage.
 
-Automatic cap selection for deep libraries:
-```sh
-ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --max-reads-per-sample auto
-```
-
-In `auto` mode, AmpWrap estimates a plateau from subsampled reads using dereplicated non-singleton exact sequences and keeps all reads unless a sensible cap is supported by the data.
+Use `--max-reads-per-sample` only as an explicit fixed cap when you want to downsample very deep libraries before QC and denoising.
 
 Convenience profile for very large runs:
 ```sh
@@ -284,6 +279,17 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --as
 ```
 
 This is useful when you want to retain only ASVs within a user-defined sequence-length interval after chimera removal.
+
+Optional organelle-filtered phyloseq outputs:
+```sh
+ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --remove-organelle-phyloseq
+```
+
+This keeps the standard outputs unchanged and additionally writes:
+- `phyloseq_object_no_organelle.rds`
+- `ASVs_counts_no_organelle.tsv`
+- `ASVs_taxonomy_no_organelle.tsv`
+- `ASVs_no_organelle.biom`
 
 Accepted short-read input names:
 ```text
@@ -528,17 +534,4 @@ ampwrap short \
 ```
 
 This is useful when the biological target typically needs around `100k-200k` reads per sample but sequencing produced much deeper libraries.
-
-If you prefer a data-driven decision instead of a fixed number, use:
-
-```sh
-ampwrap short \
-  -i input_directory \
-  -a FORWARD \
-  -A REVERSE \
-  -l 372 \
-  --max-reads-per-sample auto
-```
-
-This mode estimates a saturation curve on subsampled reads and only caps aggressively when the gain in non-singleton exact sequence complexity becomes marginal.
  

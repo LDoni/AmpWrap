@@ -3,7 +3,17 @@ import glob
 import datetime
 import math
 
-version = "1.1.1"
+
+def load_ampwrap_version():
+    version_path = os.path.join(os.path.dirname(os.path.abspath(workflow.snakefile)), "VERSION")
+    try:
+        with open(version_path) as handle:
+            return handle.read().strip()
+    except OSError:
+        return "unknown"
+
+
+version = load_ampwrap_version()
 
 # Directories and parameters
 start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -104,6 +114,7 @@ else:
 outdirs = expand("",run_dir=run_dirs)
 
 CONDA_BIN = os.path.join(os.environ.get('CONDA_PREFIX', ''), 'bin')
+MULTIQC_BIN = os.path.join(CONDA_BIN, 'multiqc') if CONDA_BIN else 'multiqc'
 LOCAL_SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(workflow.snakefile)), 'scripts')
 if os.path.exists(LOCAL_SCRIPTS_DIR):
     SCRIPTS_DIR = LOCAL_SCRIPTS_DIR
@@ -128,7 +139,6 @@ SCRIPT_PATHS = {
     'dada2_asv_table': os.path.join(SCRIPTS_DIR, 'dada2_asv_table.R'),
     'track_reads': os.path.join(SCRIPTS_DIR, 'track_reads.R'),
     'reporter': os.path.join(SCRIPTS_DIR, 'reporter_short.py'),
-    'estimate_read_cap': os.path.join(SCRIPTS_DIR, 'estimate_read_cap.py'),
     'update_db_manifest': os.path.join(SCRIPTS_DIR, 'update_db_manifest.py')
 }
 
@@ -162,7 +172,7 @@ if len(runs)>1: is_multirun = True
 else: is_multirun = False
 
 chimerae_dir = f"{runs[0]}/intermediate"
-if is_multirun: chimerae_dir = "all_runs"
+if is_multirun: chimerae_dir = "all_runs/intermediate"
 
 sample_by_run = {run: sample_df.loc[sample_df["Run"] == run, "Sample"].unique().tolist()
                      for run in runs}
@@ -304,7 +314,7 @@ def mergeRuns(wildcards,runs=runs):
 
 def trackReadsDict(wildcards,runs=runs):
     chimerae_dir = f"{runs[0]}/intermediate"
-    if is_multirun: chimerae_dir = "all_runs"
+    if is_multirun: chimerae_dir = "all_runs/intermediate"
 
     d = {"summaries": [f"{output_dir}/{run}/intermediate/dada2_filtered/filter_summary.tsv" for run in runs],
          "fwd":[f"{output_dir}/{run}/intermediate/dada_fwd.rds" for run in runs],
@@ -325,8 +335,9 @@ def figaro_arg(wc):
 rule all:
     input:
         expand(
-            f"{config['output_dir']}/{c['Run']}/intermediate/figaro/trimParameters.json",
-            c=combo
+            "{output_dir}/{run}/intermediate/figaro/trimParameters.json",
+            output_dir=[config['output_dir']],
+            run=runs
         ) if dry_run_tune else
         [
             # Figaro input
@@ -398,8 +409,7 @@ rule input_symlink:
     threads: rule_threads("input_symlink")
     params:
         max_reads=max_reads_per_sample,
-        sample_seed=lambda wildcards: stable_seed(wildcards.sample, wildcards.run),
-        cap_script=SCRIPT_PATHS['estimate_read_cap']
+        sample_seed=lambda wildcards: stable_seed(wildcards.sample, wildcards.run)
     shell:
         r"""
         mkdir -p $(dirname {log})
@@ -415,51 +425,7 @@ rule input_symlink:
 
         MAX_READS_VALUE="{params.max_reads}"
 
-        if [ "$MAX_READS_VALUE" = "auto" ]; then
-            AUTO_REPORT=$(mktemp)
-            SELECTED_CAP=$(python {params.cap_script} \
-                --input "$SRC" \
-                --total-reads "$TOTAL_READS" \
-                --seed {params.sample_seed} \
-                --report "$AUTO_REPORT")
-            if [ -z "$SELECTED_CAP" ]; then
-                echo "Auto cap selection failed for $SRC" > {log}
-                cat "$AUTO_REPORT" >> {log}
-                rm -f "$AUTO_REPORT"
-                exit 1
-            fi
-
-            if [ "$TOTAL_READS" -le "$SELECTED_CAP" ]; then
-                ln -sf "$SRC" "$TARGET"
-                {{
-                    echo "mode=symlink"
-                    echo "source=$SRC"
-                    echo "target=$TARGET"
-                    echo "reads_total=$TOTAL_READS"
-                    echo "reads_kept=$TOTAL_READS"
-                    echo "reads_requested_max=auto"
-                    echo "selected_cap=$SELECTED_CAP"
-                    echo "seed={params.sample_seed}"
-                    cat "$AUTO_REPORT"
-                }} > {log}
-            else
-                PROPORTION=$(awk -v max="$SELECTED_CAP" -v total="$TOTAL_READS" 'BEGIN {{printf "%.12f", max/total}}')
-                seqkit sample -2 -p "$PROPORTION" -s {params.sample_seed} "$SRC" -o "$TARGET" > /dev/null
-                KEPT_READS=$(seqkit stats -j {threads} -T "$TARGET" | awk 'NR==2 {{print $4}}')
-                {{
-                    echo "mode=downsample-auto"
-                    echo "source=$SRC"
-                    echo "target=$TARGET"
-                    echo "reads_total=$TOTAL_READS"
-                    echo "reads_requested_max=auto"
-                    echo "selected_cap=$SELECTED_CAP"
-                    echo "reads_kept=$KEPT_READS"
-                    echo "seed={params.sample_seed}"
-                    cat "$AUTO_REPORT"
-                }} > {log}
-            fi
-            rm -f "$AUTO_REPORT"
-        elif [ "$MAX_READS_VALUE" -gt 0 ]; then
+        if [ "$MAX_READS_VALUE" -gt 0 ]; then
             if [ "$TOTAL_READS" -le "$MAX_READS_VALUE" ]; then
                 ln -sf "$SRC" "$TARGET"
                 {{
@@ -553,7 +519,7 @@ rule multiqc_initial:
     shell:
         """
         mkdir -p $(dirname {log})
-        multiqc $(dirname {output}) -o $(dirname {output}) --force > {log} 2>&1
+        {MULTIQC_BIN} $(dirname {output}) -o $(dirname {output}) --force > {log} 2>&1
         """
 
 rule combine_cutadapt_logs:
@@ -603,8 +569,8 @@ rule combine_cutadapt_logs:
                     trimmed_r1 = f"{output_dir}/{wildcards.run}/intermediate/cutadapt/{sample}_trimmed_R1.fq.gz"
                     reads, bps = seqkit_stats(trimmed_r1)
                 else:
-                    reads_match = re.search(r"Pairs written \\(passing filters\\):\\s+([0-9,]+)", content)
-                    bps_match = re.search(r"Total written \\(filtered\\):\\s+([0-9,]+) bp", content)
+                    reads_match = re.search(r"Pairs written \(passing filters\):\s+([0-9,]+)", content)
+                    bps_match = re.search(r"Total written \(filtered\):\s+([0-9,]+) bp", content)
                     if not reads_match or not bps_match:
                         raise ValueError(f"Could not parse cutadapt log: {path}")
                     reads = reads_match.group(1).replace(",", "")
@@ -643,7 +609,7 @@ rule multiqc_final:
     shell:
         """
         mkdir -p $(dirname {log})
-        multiqc $(dirname {output}) -o $(dirname {output}) --force > {log} 2>&1
+        {MULTIQC_BIN} $(dirname {output}) -o $(dirname {output}) --force > {log} 2>&1
         """
 
 rule figaro:
@@ -931,7 +897,7 @@ rule dada2_remove_chimeras:
     shell:
         """
         mkdir -p $(dirname {log})
-        Rscript {params.chimera_script} {input} {output.no_chimera_asvs} {params.asv_length_mode} {params.asv_length_min} {params.asv_length_max} {params.amplicon_length} {threads} {output.length_report} > {log} 2>&1
+        Rscript {params.chimera_script} {input} {output.no_chimera_asvs} "{params.asv_length_mode}" "{params.asv_length_min}" "{params.asv_length_max}" "{params.amplicon_length}" "{threads}" "{output.length_report}" > {log} 2>&1
         """
 
 rule download_dada2_db:
@@ -1086,6 +1052,7 @@ rule dada2_assign_taxonomy:
     params:
         method=assign_taxonomy_method,
         species_assignment=species_assignment,
+        remove_organelle_phyloseq=bool(config.get("remove_organelle_phyloseq", False)),
         tax_scriptdada16S=SCRIPT_PATHS['dada2_assign_taxonomy16S'],
         tax_script_dechipher=SCRIPT_PATHS['dada2_assign_taxonomyDHCP'],
         tax_scriptdadaPr2=SCRIPT_PATHS['dada2_assign_taxonomyPR2'],
@@ -1098,14 +1065,15 @@ rule dada2_assign_taxonomy:
         if [[ "{params.species_assignment}" == "True" ]]; then
             SPECIES_DB="{input.species_db}"
         fi
+        FILTER_ORGANELLE="{params.remove_organelle_phyloseq}"
         if [[ {params.method} == "decipher_silva138" || {params.method} == "decipher_gtdb226" || {params.method} == "decipher_rdp18" ]]; then
-            Rscript {params.tax_script_dechipher} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} > {log} 2>&1
+            Rscript {params.tax_script_dechipher} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} "$FILTER_ORGANELLE" > {log} 2>&1
         elif [[ {params.method} == "dada2_silva_genus138" || {params.method} == "dada2_RDP_genus19" || {params.method} == "dada2_GG2_genus09" || {params.method} == "dada2_RefSeq_RDPv16" || {params.method} == "dada2_GTDB_r202" ]]; then
-             Rscript {params.tax_scriptdada16S} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} "$SPECIES_DB" > {log} 2>&1
+             Rscript {params.tax_scriptdada16S} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} "$SPECIES_DB" "$FILTER_ORGANELLE" > {log} 2>&1
         elif [[ {params.method} == "dada2_pr2_5.1.1" ]]; then
-            Rscript {params.tax_scriptdadaPr2} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} > {log} 2>&1
+            Rscript {params.tax_scriptdadaPr2} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} "$FILTER_ORGANELLE" > {log} 2>&1
         elif [[ {params.method} == "dada2_18S_silva132" ]]; then
-            Rscript {params.tax_scriptdada18S} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} > {log} 2>&1
+            Rscript {params.tax_scriptdada18S} {input.no_chimera_asvs} {input.db} {output_dir}/results {threads} "$FILTER_ORGANELLE" > {log} 2>&1
         else
             echo "Error: method not valid."
             echo " try: ampwrap short --db-info"

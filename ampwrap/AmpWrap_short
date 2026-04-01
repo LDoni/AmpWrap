@@ -47,6 +47,15 @@ SPECIES_SUPPORTED_DB_CHOICES = {
 class ReadableHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
     pass
 
+
+def load_ampwrap_version():
+    version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")
+    try:
+        with open(version_path) as handle:
+            return handle.read().strip()
+    except OSError:
+        return "unknown"
+
 # UTILS
 
 def print_banner():
@@ -172,9 +181,6 @@ def parse_nonnegative_int(value, option_name):
 
 
 def parse_max_reads(value):
-    lowered = str(value).strip().lower()
-    if lowered == "auto":
-        return "auto"
     return parse_positive_int(value, "--max-reads-per-sample")
 
 
@@ -300,7 +306,8 @@ def write_config_yaml(input_dir, output_dir, forward_primer, reverse_primer, amp
 metainfo, extension, figaro_name, trim_primers_dada2, disable_discard_untrimmed, dry_run_tune,
 dada2_params=None, threads=None, loess_model=None, max_reads_per_sample=None, db_dir=None,
 asv_length_mode="off", asv_length_tolerance=None, asv_length_min=None, asv_length_max=None, bigdata_mode=False,
-dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced", species=False):
+dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced", species=False,
+remove_organelle_phyloseq=False):
     config = {
         "input_dir": input_dir,
         "output_dir": output_dir,
@@ -329,6 +336,7 @@ dada2_trim_left=None, dada2_trim_right=None, resource_profile="balanced", specie
         "bigdata_mode": bool(bigdata_mode),
         "resource_profile": resource_profile,
         "species_assignment": bool(species),
+        "remove_organelle_phyloseq": bool(remove_organelle_phyloseq),
     }
     if dada2_trim_left is not None:
         config["dada2_trim_left"] = ",".join(str(v) for v in dada2_trim_left)
@@ -375,8 +383,54 @@ def run_snakemake(config_path, is_quiet=False, until=None, cores="all"):
 
     print("Let's Go:", " ".join(args))
 
+    progress_pattern = re.compile(r"(?P<done>\d+)\s+of\s+(?P<total>\d+)\s+steps")
+
+    def render_progress(done, total):
+        width = 28
+        ratio = 0 if total <= 0 else max(0.0, min(1.0, done / total))
+        filled = int(round(width * ratio))
+        bar = "#" * filled + "-" * (width - filled)
+        return f"[{bar}] {ratio * 100:5.1f}% ({done}/{total})"
+
     try:
-        subprocess.run(args, check=True)
+        if is_quiet:
+            subprocess.run(args, check=True)
+            return
+
+        process = subprocess.Popen(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        last_progress = None
+        is_tty = sys.stdout.isatty()
+        assert process.stdout is not None
+        for line in process.stdout:
+            match = progress_pattern.search(line)
+            if match:
+                done = int(match.group("done"))
+                total = int(match.group("total"))
+                progress_line = render_progress(done, total)
+                last_progress = progress_line
+                if is_tty:
+                    print(f"\r{progress_line}", end="", flush=True)
+                else:
+                    print(progress_line)
+                continue
+
+            if is_tty and last_progress is not None:
+                print()
+                last_progress = None
+            print(line, end="")
+
+        return_code = process.wait()
+        if is_tty and last_progress is not None:
+            print()
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, args)
     except subprocess.CalledProcessError as e:
         print(f"ERROR in Snakemake: {e}")
         sys.exit(1)
@@ -403,6 +457,7 @@ def main():
             "  Custom:    sample_R1.fastq.gz / sample_R2.fastq.gz\n"
             "  Illumina:  sample_S1_L001_R1_001.fastq.gz / sample_S1_L001_R2_001.fastq.gz"
         ),
+        prog=f"ampwrap short ({load_ampwrap_version()})",
         formatter_class=ReadableHelpFormatter,
         epilog=(
             "Examples:\n"
@@ -411,7 +466,7 @@ def main():
             "  ampwrap short -i reads_dir -a FORWARD -A REVERSE \\\n"
             "    --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'\n"
             "  ampwrap short -i reads_dir -a FORWARD -A REVERSE -l 372 \\\n"
-            "    --loess_model auto --max-reads-per-sample auto --cores 4"
+            "    --loess_model auto --max-reads-per-sample 200000 --cores 4"
         ),
     )
     required = parser.add_argument_group("required arguments")
@@ -448,11 +503,22 @@ def main():
             "Supported only for dada2_silva_genus138 and dada2_RDP_genus19."
         ),
     )
+    general.add_argument(
+        "--remove-organelle-phyloseq",
+        action="store_true",
+        help=(
+            "Save an additional phyloseq object filtered for chloroplast and mitochondria taxa.\n"
+            "The original phyloseq object is always retained."
+        ),
+    )
     general.add_argument("-q", "--quiet", action="store_true", help="Minimal standard output")
     general.add_argument("--db-info", action="store_true", help="Show available databases and exit")
     general.add_argument(
         "--bigdata", action="store_true",
-        help="Apply safer defaults for very deep datasets (currently enables auto read-cap and limits cores if not specified).",
+        help=(
+            "Apply safer defaults for very deep datasets.\n"
+            "Enables the sample-wise streaming DADA2 inference path and limits cores if not specified."
+        ),
     )
 
     denoising = parser.add_argument_group("denoising and trimming")
@@ -505,7 +571,7 @@ def main():
         "--max-reads-per-sample", type=parse_max_reads,
         help=(
             "Cap reads per sample before QC/trimming.\n"
-            "Use an integer for a fixed cap or 'auto' for plateau-based selection on deep libraries."
+            "Use an integer for a fixed cap."
         ),
     )
     denoising.add_argument(
@@ -560,11 +626,9 @@ def main():
     cores = args.cores
 
     if args.bigdata:
-        if args.max_reads_per_sample is None:
-            args.max_reads_per_sample = "auto"
         if cores == "all":
             cores = 4
-        print(f"INFO: --bigdata enabled, using max_reads_per_sample={args.max_reads_per_sample} and cores={cores}")
+        print(f"INFO: --bigdata enabled, using cores={cores}")
 
     try:
         dada2_params = validate_dada2_params(args.dada2_params)
@@ -747,7 +811,8 @@ def main():
                 dada2_trim_left=dada2_trim_left,
                 dada2_trim_right=dada2_trim_right,
                 resource_profile=args.resource_profile,
-                species=args.species)
+                species=args.species,
+                remove_organelle_phyloseq=args.remove_organelle_phyloseq)
     run_snakemake(config_path, is_quiet, cores=cores)
 
 

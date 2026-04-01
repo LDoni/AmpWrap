@@ -1,6 +1,18 @@
 import os
 from datetime import datetime
 
+
+def load_ampwrap_version():
+    version_path = os.path.join(os.path.dirname(os.path.abspath(workflow.snakefile)), "VERSION")
+    try:
+        with open(version_path) as handle:
+            return handle.read().strip()
+    except OSError:
+        return "unknown"
+
+
+version = load_ampwrap_version()
+
 # Configure input output directories
 latency_wait = 20
 input_dir = config["input_dir"]
@@ -116,7 +128,7 @@ rule seqkit_stats_pre_qc:
                sample=sample_names,
                file_extension=file_extension)
     output:
-        "{output_dir}/QC/raw_qc_initial/readcount/raw_reads_counts.txt"
+        f"{output_dir}/QC/raw_qc_initial/readcount/raw_reads_counts.txt"
     log:
         f"{logs_dir}/seqkit_stats_pre_qc/seqkit_stats_pre_qc.log"
     shell:
@@ -130,7 +142,7 @@ rule fastqc_initial:
     input:
         f"{input_dir}/{{sample}}.{file_extension}"
     output:
-        "{output_dir}/QC/raw_qc_initial/{sample}_fastqc.html"
+        f"{output_dir}/QC/raw_qc_initial/{{sample}}_fastqc.html"
     log:
         f"{logs_dir}/fastqc_initial/{{sample}}.log"
     shell:
@@ -154,7 +166,7 @@ rule porechop:
     input:
         f"{input_dir}/{{sample}}.{file_extension}"
     output:
-        fq="{output_dir}/intermediate/porechop/{sample}-porechop.fastq.gz"
+        fq=f"{output_dir}/intermediate/porechop/{{sample}}-porechop.fastq.gz"
     log:
         f"{logs_dir}/porechop/{{sample}}.log"
     run:
@@ -175,9 +187,9 @@ rule porechop:
 rule cutadapt_primers:
     input: unpack(getCutAdaptInput)
     output:
-        r1_trimmed = "{output_dir}/intermediate/cutadapt/{sample}_cutadapt.fq.gz",
+        r1_trimmed = f"{output_dir}/intermediate/cutadapt/{{sample}}_cutadapt.fq.gz",
     log:
-        "{output_dir}/intermediate/cutadapt/{sample}_cutadapt.log"
+        f"{output_dir}/intermediate/cutadapt/{{sample}}_cutadapt.log"
     params:
         forward_primer = forward_primer,
         reverse_primer = reverse_primer,
@@ -211,7 +223,7 @@ rule nanofilt:
     input:
         unpack(getNanoFiltInput)
     output:
-        fq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
+        fq=f"{output_dir}/intermediate/nanofilt/{{sample}}-nanofilt.fastq"
     log:
         f"{logs_dir}/nanofilt/{{sample}}.log"
     shell:
@@ -227,9 +239,9 @@ rule nanofilt:
 
 rule fastqc_post:
     input:
-        trimmed_files = "{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
+        trimmed_files = f"{output_dir}/intermediate/nanofilt/{{sample}}-nanofilt.fastq"
     output:
-        fastqc = "{output_dir}/QC/raw_qc_post/{sample}-nanofilt_fastqc.html"
+        fastqc = f"{output_dir}/QC/raw_qc_post/{{sample}}-nanofilt_fastqc.html"
     log:
         f"{logs_dir}/fastqc_post/{{sample}}.log"
     shell:
@@ -241,7 +253,7 @@ rule fastqc_post:
 
 rule multiqc_post:
     input: expand("{output_dir}/QC/raw_qc_post/{sample}-nanofilt_fastqc.html",output_dir=output_dir,sample=sample_names)
-    output: "{output_dir}/QC/raw_qc_post/multiqc_report.html"
+    output: f"{output_dir}/QC/raw_qc_post/multiqc_report.html"
     log: f"{logs_dir}/multiqc_post/multiqc_post.log"
     shell:
         """
@@ -251,14 +263,14 @@ rule multiqc_post:
 
 rule chimera_scrub:
     input:
-        fq="{output_dir}/intermediate/nanofilt/{sample}-nanofilt.fastq"
+        fq=f"{output_dir}/intermediate/nanofilt/{{sample}}-nanofilt.fastq"
     output:
-        fq="{output_dir}/intermediate/nanofilt/{sample}-scrubbed.fastq",
+        fq=f"{output_dir}/intermediate/nanofilt/{{sample}}-scrubbed.fastq",
     threads:
         cpus
     params:
-        paf="{output_dir}/intermediate/nanofilt/{sample}.paf",
-        yacrd="{output_dir}/intermediate/nanofilt/{sample}.yacrd"
+        paf=f"{output_dir}/intermediate/nanofilt/{{sample}}.paf",
+        yacrd=f"{output_dir}/intermediate/nanofilt/{{sample}}.yacrd"
     log:
         f"{logs_dir}/chimera_scrub/{{sample}}.log"
     shell:
@@ -276,7 +288,7 @@ rule seqkit_stats_post_qc:
                sample=sample_names,
                suffix=suffix)
     output:
-        "{output_dir}/QC/raw_qc_post/readcount/filtered_reads_counts.txt"
+        f"{output_dir}/QC/raw_qc_post/readcount/filtered_reads_counts.txt"
     log:
         f"{logs_dir}/seqkit_stats_post_qc/seqkit_stats_post_qc.log"
     shell:
@@ -412,7 +424,7 @@ rule emu_abundance:
     input:
         unpack(getEmuInput)
     output:
-        "{output_dir}/results/emu/{sample}-{suffix}_rel-abundance.tsv",
+        f"{output_dir}/results/emu/{{sample}}-{suffix}_rel-abundance.tsv",
     log:
         f"{logs_dir}/emu_abundance/{{sample}}.log"
     params:
@@ -435,8 +447,8 @@ rule emu_phyloseq:
         expand("{output_dir}/results/emu/{sample}-{suffix}_rel-abundance.tsv",
                output_dir=output_dir, sample=sample_names, suffix=suffix)
     output:
-        "{output_dir}/results/emu/emu_phyloseq.rds",
-        "{output_dir}/results/emu/emu_abundance.biom"
+        f"{output_dir}/results/emu/emu_phyloseq.rds",
+        f"{output_dir}/results/emu/emu_abundance.biom"
     log:
         f"{logs_dir}/emu_phyloseq/emu_phyloseq.log"
     params:
@@ -471,6 +483,7 @@ rule reporter:
         RC_RVS = RC_RVS,
         start = start_time,
         tax_db = config["tax_db"],
+        version = version,
         to_cutadapt = to_cutadapt,
         trimming_method = trimming_method
     script:
