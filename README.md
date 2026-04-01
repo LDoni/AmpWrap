@@ -262,6 +262,17 @@ Species-level assignment for supported 16S DADA2 databases:
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 -d dada2_silva_genus138 --species
 ```
 
+Manual DADA2 parameters:
+```sh
+ampwrap short \
+  -i input_directory \
+  -a FORWARD \
+  -A REVERSE \
+  --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'
+```
+
+When `--dada2_params` is used, both `truncLen` and `maxEE` must be present and `-l` is not required because FIGARO is bypassed.
+
 Automatic/shared error model selection for binned qualities:
 ```sh
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --loess_model auto
@@ -272,6 +283,20 @@ Force a specific error model:
 ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --loess_model 1
 ```
 
+#### `--loess_model` notes
+
+AmpWrap keeps the standard DADA2 error-learning model as `vanilla` and adds a small set of alternative loess fits (`1` to `4`) that can behave better on quality-binned data, especially NovaSeq-style datasets.
+
+- `vanilla`: default DADA2 behaviour
+- `1` to `4`: alternative smoothed fits with different weighting/regularization choices
+- `auto`: evaluates the available models on held-out data and selects the best one, then enforces the same selected model for forward and reverse reads
+
+These models are still DADA2-based error models. They do not replace DADA2 denoising; they only change the smooth fit used during `learnErrors()`.
+
+Background and citations:
+- Callahan BJ et al. 2016. DADA2: High-resolution sample inference from Illumina amplicon data. *Nature Methods* 13:581-583.
+- DADA2 tutorial and error-learning documentation: <https://benjjneb.github.io/dada2/tutorial.html>
+
 
 Cap very deep libraries before QC/trimming:
 ```sh
@@ -281,6 +306,18 @@ ampwrap short -i input_directory -a forward_primer -A reverse_primer -l 372 --ma
 This is useful for oversized NovaSeq metabarcoding libraries when you want to keep a reproducible random subset of reads and reduce runtime and memory usage.
 
 Use `--max-reads-per-sample` only as an explicit fixed cap when you want to downsample very deep libraries before QC and denoising.
+
+Very deep NovaSeq libraries:
+```sh
+ampwrap short \
+  -i input_directory \
+  -a FORWARD \
+  -A REVERSE \
+  -l 372 \
+  --max-reads-per-sample 200000
+```
+
+This is useful when the biological target typically needs around `100k-200k` reads per sample but sequencing produced much deeper libraries.
 
 Convenience profile for very large runs:
 ```sh
@@ -542,33 +579,3 @@ If a directory does not contain valid pairs, AmpWrap now reports:
 - that the parser could not match the supported formats, or
 - which sample is missing an `R1` or `R2` mate
 - when `R1` and `R2` look like the same sample except for small naming differences, that AmpWrap detected a probable pair typo
-
-### Manual DADA2 parameters
-
-If you pass `--dada2_params`, both `truncLen` and `maxEE` must be present, for example:
-
-```sh
-ampwrap short \
-  -i input_directory \
-  -a FORWARD \
-  -A REVERSE \
-  --dada2_params 'truncLen=c(240,200);maxEE=c(2,2)'
-```
-
-In this mode `-l` is not required, because FIGARO is bypassed.
-
-### Very deep NovaSeq libraries
-
-For very deep libraries, you can downsample reproducibly before QC and DADA2:
-
-```sh
-ampwrap short \
-  -i input_directory \
-  -a FORWARD \
-  -A REVERSE \
-  -l 372 \
-  --max-reads-per-sample 200000
-```
-
-This is useful when the biological target typically needs around `100k-200k` reads per sample but sequencing produced much deeper libraries.
- 
