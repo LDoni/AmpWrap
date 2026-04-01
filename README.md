@@ -153,8 +153,8 @@ If input files do not follow one of these paired-end conventions, AmpWrap report
 AmpWrap short also aborts early if it detects likely mate-pair typos where `R1` and `R2` only differ by small basename edits, for example:
 
 ```text
-IT056_2024_6_S_20_REP1_16S_R1.fastq.gz
-IT056-2024-6-S-20-REP1-16S_R2.fastq.gz
+sample_A_R1.fastq.gz
+sample-A_R2.fastq.gz
 ```
 
 This avoids silent pairing mistakes caused by `_` vs `-` or similar accidental renaming differences.
