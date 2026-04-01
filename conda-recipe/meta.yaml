@@ -1,8 +1,6 @@
-{% set version = load_file_regex("../ampwrap/VERSION", "^(.*)$", from_recipe_dir=True).group(1) %}
-
 package:
   name: ampwrap
-  version: {{ version }}
+  version: "1.2.0"
 
 source:
   path: ..
