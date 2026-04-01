@@ -61,6 +61,11 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command")
     list_parser = subparsers.add_parser("list", help="List databases recorded in the manifest")
+    list_parser.add_argument(
+        "--db-dir",
+        dest="list_db_dir",
+        help="Database cache root directory. Accepts the same value as the top-level --db-dir.",
+    )
     list_parser.add_argument("--category", help="Optional category filter, e.g. dada2 or emu")
 
     args = parser.parse_args()
@@ -68,7 +73,8 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    rows = read_manifest(manifest_path(args.db_dir))
+    selected_db_dir = args.list_db_dir if getattr(args, "list_db_dir", None) else args.db_dir
+    rows = read_manifest(manifest_path(selected_db_dir))
     if args.category:
         rows = [row for row in rows if row.get("category") == args.category]
     print_rows(rows)
