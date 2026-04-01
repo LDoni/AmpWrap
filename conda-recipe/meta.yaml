@@ -1,0 +1,68 @@
+{% set version = load_file_regex("../ampwrap/VERSION", "^(.*)$", from_recipe_dir=True).group(1) %}
+
+package:
+  name: ampwrap
+  version: {{ version }}
+
+source:
+  path: ..
+
+build:
+  number: 0
+  noarch: generic
+  script: bash conda-recipe/build.sh
+
+requirements:
+  host:
+    - bash
+  run:
+    - python >=3.9
+    - pyyaml
+    - colorama
+    - pandas
+    - numpy
+    - snakemake-minimal >=7
+    - cutadapt
+    - fastqc
+    - multiqc
+    - seqkit
+    - pigz
+    - jq
+    - curl
+    - wget
+    - unzip
+    - emu
+    - nanofilt
+    - minimap2
+    - porechop
+    - porechop_abi
+    - openjdk >=11
+    - r-base >=4.3
+    - r-yaml
+    - r-jsonlite
+    - bioconductor-dada2
+    - bioconductor-decipher
+    - bioconductor-biomformat
+    - bioconductor-phyloseq
+    - bioconductor-shortread
+    - bioconductor-biostrings
+    - bioconductor-rsamtools
+
+test:
+  commands:
+    - ampwrap --help
+    - ampwrap short --help
+    - ampwrap long --help
+    - ampwrap db --help
+
+about:
+  home: https://github.com/LDoni/AmpWrap
+  license: MIT
+  summary: AmpWrap workflows for short-read and Nanopore amplicon analysis
+  description: |
+    AmpWrap wraps DADA2-, DECIPHER-, and EMU-based amplicon workflows with
+    opinionated Snakemake pipelines for short-read and Nanopore analyses.
+
+extra:
+  recipe-maintainers:
+    - LDoni

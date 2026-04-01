@@ -100,6 +100,22 @@ Install AmpWrap
 conda activate ampwrap
 bash setup.sh
 ```
+
+### Build a Conda package
+AmpWrap now ships with a local conda recipe in [conda-recipe/meta.yaml](/home/ebosi/AmpWrap/conda-recipe/meta.yaml).
+
+Build it with:
+```sh
+conda build conda-recipe
+```
+
+or, if you use `boa`:
+```sh
+mambabuild conda-recipe
+```
+
+The package version is read from `ampwrap/VERSION`, which is also the version shown in the launcher help and final reports.
+
 or 
 ## Install with docker
 ```sh
