@@ -150,6 +150,15 @@ S1_r2.fq.gz
 
 If input files do not follow one of these paired-end conventions, AmpWrap reports the expected formats explicitly and shows which parser failed.
 
+AmpWrap short also aborts early if it detects likely mate-pair typos where `R1` and `R2` only differ by small basename edits, for example:
+
+```text
+IT056_2024_6_S_20_REP1_16S_R1.fastq.gz
+IT056-2024-6-S-20-REP1-16S_R2.fastq.gz
+```
+
+This avoids silent pairing mistakes caused by `_` vs `-` or similar accidental renaming differences.
+
 ## Database cache
 
 AmpWrap now uses a central database cache by default instead of copying databases into each clone or conda environment.
@@ -392,6 +401,17 @@ Basic usage:
 ```sh
 ampwrap long -i input_directory -o output_directory
 ```
+
+Database notes for `ampwrap long`:
+- the default EMU cache is `~/.ampwrap/db/emu`
+- you can override it with `--db-dir`
+- `ampwrap long --help` prints the active default path
+- PR2 prebuilt EMU databases are normalized internally to the canonical EMU layout required by `emu abundance`
+
+Long-read sample naming:
+- input sample names are derived from the FASTQ basename after stripping `.fastq`, `.fq`, `.fastq.gz`, or `.fq.gz`
+- intermediate filenames may still contain `-nanofilt` or `-scrubbed`
+- final sample names in the report and in `emu_phyloseq.rds` are written without those suffixes
 ## Long reads Test Usage
 You can use a small toy sequencing run to test AmpWrap
 ```sh
@@ -505,6 +525,7 @@ If a directory does not contain valid pairs, AmpWrap now reports:
 - that no recognizable `_R1` / `_R2` FASTQ files were found, or
 - that the parser could not match the supported formats, or
 - which sample is missing an `R1` or `R2` mate
+- when `R1` and `R2` look like the same sample except for small naming differences, that AmpWrap detected a probable pair typo
 
 ### Manual DADA2 parameters
 
