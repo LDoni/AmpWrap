@@ -284,8 +284,10 @@ def validate_dada2_params(raw_params):
 
 def validate_paired_samples(parsed_files, input_dir):
     sample_to_directions = {}
-    for _, _, sample, direction in parsed_files:
+    sample_to_files = {}
+    for file_path, file_name, sample, direction in parsed_files:
         sample_to_directions.setdefault(sample, set()).add(direction)
+        sample_to_files.setdefault(sample, {})[direction] = file_name
 
     invalid = {
         sample: sorted(directions)
@@ -293,6 +295,34 @@ def validate_paired_samples(parsed_files, input_dir):
         if directions != {1, 2}
     }
     if invalid:
+        normalized_groups = {}
+        for sample, directions in invalid.items():
+            normalized = re.sub(r"[-_]+", "", sample).lower()
+            normalized_groups.setdefault(normalized, []).append((sample, directions))
+
+        probable_pair_typos = []
+        for normalized, members in sorted(normalized_groups.items()):
+            seen_directions = set()
+            for _, directions in members:
+                seen_directions.update(directions)
+            if seen_directions == {1, 2} and len(members) > 1:
+                details = []
+                for sample, directions in members:
+                    direction_labels = ",".join(f"R{direction}" for direction in directions)
+                    file_labels = ", ".join(
+                        sample_to_files.get(sample, {}).get(direction, f"{sample} (missing R{direction})")
+                        for direction in sorted(directions)
+                    )
+                    details.append(f"{sample} -> {direction_labels} [{file_labels}]")
+                probable_pair_typos.append("; ".join(details))
+
+        if probable_pair_typos:
+            raise ValueError(
+                f"Input directory '{input_dir}' contains read pairs with inconsistent sample naming. "
+                "AmpWrap detected likely R1/R2 pair typos caused by separators or small basename differences, for example '_' vs '-'. "
+                f"Details: {' | '.join(probable_pair_typos)}"
+            )
+
         details = "; ".join(
             f"{sample} has directions {dirs}" for sample, dirs in sorted(invalid.items())
         )

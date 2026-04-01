@@ -42,6 +42,10 @@ to_cutadapt = all(
 forward_primer = config.get("forward_primer")
 reverse_primer = config.get("reverse_primer")
 CONDA_BIN = os.path.join(os.environ.get('CONDA_PREFIX', ''), 'bin')
+SEQKIT_BIN = os.path.join(CONDA_BIN, 'seqkit') if CONDA_BIN else 'seqkit'
+FASTQC_BIN = os.path.join(CONDA_BIN, 'fastqc') if CONDA_BIN else 'fastqc'
+MULTIQC_BIN = os.path.join(CONDA_BIN, 'multiqc') if CONDA_BIN else 'multiqc'
+EMU_BIN = os.path.join(CONDA_BIN, 'emu') if CONDA_BIN else 'emu'
 LOCAL_SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(workflow.snakefile)), 'scripts')
 if os.path.exists(LOCAL_SCRIPTS_DIR):
     SCRIPTS_DIR = LOCAL_SCRIPTS_DIR
@@ -135,7 +139,7 @@ rule seqkit_stats_pre_qc:
         """
         mkdir -p $(dirname {output})
         mkdir -p $(dirname {log})
-        seqkit stats -T -j {cpus} {input_dir}/*.{file_extension} > {output} 2> {log}
+        {SEQKIT_BIN} stats -T -j {cpus} {input_dir}/*.{file_extension} > {output} 2> {log}
         """
 
 rule fastqc_initial:
@@ -149,7 +153,7 @@ rule fastqc_initial:
         """
         mkdir -p {output_dir}/QC/raw_qc_initial
         mkdir -p $(dirname {log})
-        fastqc {input} -o $(dirname {output}) > {log} 2>&1
+        {FASTQC_BIN} {input} -o $(dirname {output}) > {log} 2>&1
         """
 
 rule multiqc_initial:
@@ -159,7 +163,7 @@ rule multiqc_initial:
     shell:
         """
         mkdir -p $(dirname {log})
-        multiqc $(dirname {output}) -o $(dirname {output}) > {log} 2>&1
+        {MULTIQC_BIN} $(dirname {output}) -o $(dirname {output}) > {log} 2>&1
         """
 
 rule porechop:
@@ -248,7 +252,7 @@ rule fastqc_post:
         """
         mkdir -p $(dirname {output})
         mkdir -p $(dirname {log})
-        fastqc {input.trimmed_files} -o $(dirname {output}) > {log} 2>&1
+        {FASTQC_BIN} {input.trimmed_files} -o $(dirname {output}) > {log} 2>&1
         """
 
 rule multiqc_post:
@@ -258,7 +262,7 @@ rule multiqc_post:
     shell:
         """
         mkdir -p $(dirname {log})
-        multiqc $(dirname {output}) -o $(dirname {output}) > {log} 2>&1
+        {MULTIQC_BIN} $(dirname {output}) -o $(dirname {output}) > {log} 2>&1
         """
 
 rule chimera_scrub:
@@ -295,7 +299,7 @@ rule seqkit_stats_post_qc:
         """
         mkdir -p $(dirname {output})
         mkdir -p $(dirname {log})
-        seqkit stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-{suffix}.fastq > {output} 2> {log}
+        {SEQKIT_BIN} stats -T -j {cpus} {output_dir}/intermediate/nanofilt/*-{suffix}.fastq > {output} 2> {log}
         """
 
 
@@ -346,15 +350,44 @@ rule emu_database:
     run:
         import os
         import subprocess
+        archive_dir = os.path.join(db_root, "_archives")
         os.makedirs(output.the_dir, exist_ok=True)
+        os.makedirs(archive_dir, exist_ok=True)
         os.makedirs(os.path.dirname(str(log)), exist_ok=True)
 
         with open(str(log), "w") as log_handle:
-            if tax_db == "pr2":
-                db_zip = f"{db_dir}/pr2_version_5.1.1_emu.zip"
-                db_url = "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_emu.zip"
+            if os.path.exists(output.taxonomy) and os.path.exists(output.taxids):
+                print(f"Database already present in {output.the_dir}", file=log_handle)
+                return
 
-                subprocess.run(["wget", "-O", db_zip, db_url], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+            if tax_db == "pr2":
+                db_zip = os.path.join(archive_dir, "pr2_version_5.1.1_emu.zip")
+                db_url = "https://github.com/pr2database/pr2database/releases/download/v5.1.1/pr2_version_5.1.1_emu.zip"
+                tmp_zip = f"{db_zip}.tmp"
+                extracted_fasta = os.path.join(output.the_dir, "pr2_version_5.1.1_emu.fasta")
+                extracted_taxonomy = os.path.join(output.the_dir, "pr2_version_5.1.1_emu_taxo.tsv")
+                extracted_map = os.path.join(output.the_dir, "pr2_version_5.1.1_emu_map.tsv")
+                direct_taxonomy = os.path.join(output.the_dir, "pr2_direct_taxonomy.tsv")
+                build_dir = os.path.join(output.the_dir, "pr2_build")
+
+                if not os.path.exists(db_zip):
+                    if os.path.exists(tmp_zip):
+                        os.remove(tmp_zip)
+                    download_cmds = [
+                        ["curl", "-L", "--fail", "-o", tmp_zip, db_url],
+                        ["wget", "-O", tmp_zip, db_url],
+                    ]
+                    last_error = None
+                    for cmd in download_cmds:
+                        try:
+                            subprocess.run(cmd, check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+                            os.replace(tmp_zip, db_zip)
+                            break
+                        except subprocess.CalledProcessError as exc:
+                            last_error = exc
+                    else:
+                        raise last_error
+
                 expected_md5 = params.md5_dict["pr2"]
                 result = subprocess.run(
                     f"echo '{expected_md5}  {db_zip}' | md5sum -c -",
@@ -365,6 +398,55 @@ rule emu_database:
                 if result.returncode != 0:
                     raise ValueError(f"ERROR: MD5 checksum failed for {db_zip}")
                 subprocess.run(["unzip", "-o", db_zip, "-d", output.the_dir], check=True, stdout=log_handle, stderr=subprocess.STDOUT)
+                if not os.path.exists(extracted_fasta) or not os.path.exists(extracted_taxonomy) or not os.path.exists(extracted_map):
+                    raise ValueError(
+                        "ERROR: PR2 archive did not contain the expected EMU files "
+                        f"({os.path.basename(extracted_fasta)}, {os.path.basename(extracted_taxonomy)}, {os.path.basename(extracted_map)})"
+                    )
+                with open(extracted_taxonomy, encoding="utf8") as in_handle, open(direct_taxonomy, "w", encoding="utf8") as out_handle:
+                    header = "tax_id\tspecies\tgenus\tfamily\torder\tclass\tphylum\tclade\tsuperkingdom\n"
+                    out_handle.write(header)
+                    next(in_handle)
+                    for line in in_handle:
+                        fields = line.rstrip("\n").split("\t")
+                        if len(fields) < 10:
+                            continue
+                        tax_id, domain, supergroup, division, subdivision, class_name, order_name, family, genus, species = fields[:10]
+                        clade = supergroup if supergroup else subdivision
+                        out_handle.write(
+                            "\t".join([
+                                tax_id,
+                                species,
+                                genus,
+                                family,
+                                order_name,
+                                class_name,
+                                division,
+                                clade,
+                                domain,
+                            ]) + "\n"
+                        )
+
+                subprocess.run(
+                    [
+                        EMU_BIN,
+                        "build-database",
+                        "--sequences", extracted_fasta,
+                        "--seq2tax", extracted_map,
+                        "--taxonomy-list", direct_taxonomy,
+                        build_dir,
+                    ],
+                    check=True,
+                    cwd=output.the_dir,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                )
+                built_taxonomy = os.path.join(build_dir, "taxonomy.tsv")
+                built_fasta = os.path.join(build_dir, "species_taxid.fasta")
+                if not os.path.exists(built_taxonomy) or not os.path.exists(built_fasta):
+                    raise ValueError("ERROR: EMU PR2 database build did not produce taxonomy.tsv and species_taxid.fasta")
+                os.replace(built_taxonomy, output.taxonomy)
+                os.replace(built_fasta, output.taxids)
                 subprocess.run(
                     [
                         "python",
@@ -383,14 +465,15 @@ rule emu_database:
                 )
 
             else:
-                db_tar = f"{db_dir}/{tax_db}.tar"
+                db_tar = os.path.join(archive_dir, f"{tax_db}.tar")
                 db_url = f"osf://56uf7/emu-prebuilt/{tax_db}.tar"
-                subprocess.run(
-                    ["osf", "-p", "56uf7", "fetch", f"osfstorage/emu-prebuilt/{tax_db}.tar", db_tar],
-                    check=True,
-                    stdout=log_handle,
-                    stderr=subprocess.STDOUT,
-                )
+                if not os.path.exists(db_tar):
+                    subprocess.run(
+                        ["osf", "-p", "56uf7", "fetch", f"osfstorage/emu-prebuilt/{tax_db}.tar", db_tar],
+                        check=True,
+                        stdout=log_handle,
+                        stderr=subprocess.STDOUT,
+                    )
                 expected_md5 = params.md5_dict[tax_db]
                 result = subprocess.run(
                     f"echo '{expected_md5}  {db_tar}' | md5sum -c -",
@@ -438,8 +521,8 @@ rule emu_abundance:
         """
         mkdir -p {output_dir}/results/emu
         mkdir -p $(dirname {log})
-        echo emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts} > {log}
-        emu abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts} >> {log} 2>&1
+        echo {EMU_BIN} abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts} > {log}
+        {EMU_BIN} abundance {input} --output-dir {output_dir}/results/emu --db {params.db} --threads {threads} --min-abundance {params.min_ab} {params.keepcounts} >> {log} 2>&1
         """
 
 rule emu_phyloseq:
