@@ -908,7 +908,8 @@ rule download_dada2_db:
     params:
         url=db_config["url"],
         md5=db_config["md5"],
-        filename=db_config["filename"]
+        filename=db_config["filename"],
+        manifest_script=SCRIPT_PATHS["update_db_manifest"]
     shell:
         """
         mkdir -p $(dirname {log})
@@ -938,7 +939,7 @@ rule download_dada2_db:
             echo "MD5 verified for {params.filename}"
         fi
 
-        python {SCRIPT_PATHS['update_db_manifest']} \
+        python {params.manifest_script} \
             --manifest "{db_manifest}" \
             --category "dada2" \
             --name "{assign_taxonomy_method}" \
@@ -958,7 +959,8 @@ rule download_dada2_species_db:
     params:
         url=db_config.get("species_url", ""),
         md5=db_config.get("species_md5", ""),
-        filename=db_config.get("species_filename", "")
+        filename=db_config.get("species_filename", ""),
+        manifest_script=SCRIPT_PATHS["update_db_manifest"]
     shell:
         """
         mkdir -p $(dirname {log})
@@ -997,7 +999,7 @@ rule download_dada2_species_db:
             echo "MD5 not provided for {params.filename}; skipping checksum verification."
         fi
 
-        python {SCRIPT_PATHS['update_db_manifest']} \
+        python {params.manifest_script} \
             --manifest "{db_manifest}" \
             --category "dada2" \
             --name "{assign_taxonomy_method}.species" \
