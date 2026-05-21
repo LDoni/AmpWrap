@@ -37,10 +37,38 @@ clean_rank <- function(x) {
   x
 }
 
+taxonomy_cols <- c("superkingdom", "phylum", "class", "order", "family", "genus", "species")
+
+split_lineage <- function(lineage) {
+  ranks <- strsplit(lineage, ";", fixed = TRUE)
+  ranks <- lapply(ranks, function(x) {
+    x <- x[x != ""]
+    length(x) <- length(taxonomy_cols)
+    x[is.na(x)] <- ""
+    x
+  })
+  taxonomy <- as.data.frame(do.call(rbind, ranks), stringsAsFactors = FALSE)
+  names(taxonomy) <- taxonomy_cols
+  taxonomy
+}
+
 frames <- lapply(list_file, function(path) {
   df <- read.delim(path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-  df <- df[, c("superkingdom", "phylum", "class", "order", "family", "genus", "species", "abundance")]
-  for (col in c("superkingdom", "phylum", "class", "order", "family", "genus", "species")) {
+
+  if (all(taxonomy_cols %in% names(df))) {
+    df <- df[, c(taxonomy_cols, "abundance")]
+  } else if ("lineage" %in% names(df)) {
+    taxonomy <- split_lineage(df$lineage)
+    df <- cbind(taxonomy, abundance = df$abundance)
+  } else {
+    stop(
+      "Unsupported EMU abundance format in ", path,
+      ". Expected either taxonomy columns or a lineage column. Found: ",
+      paste(names(df), collapse = ", ")
+    )
+  }
+
+  for (col in taxonomy_cols) {
     df[[col]] <- clean_rank(df[[col]])
   }
   df$sample <- sample_name_from_file(path)
