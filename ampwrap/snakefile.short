@@ -674,11 +674,14 @@ rule figaro:
                     handle_out.write(plus)
                     handle_out.write(quality[:target_len] + "\n")
 
+        def normalized_path(path):
+            return os.path.realpath(os.path.abspath(str(path)))
+
         length_stats = {}
         target_lengths = {}
         for direction in ("1", "2"):
             direction_inputs = [
-                str(path)
+                normalized_path(path)
                 for path in list(input)
                 if re.search(rf"_R{direction}\.", os.path.basename(str(path)))
             ]
@@ -707,7 +710,7 @@ rule figaro:
                 renamed_sample = sample_renamed_dict.get(original_sample, original_sample.replace("_", "-"))
                 target_name = f"{renamed_sample}_R{direction}.{extension}"
                 target_path = os.path.join(figaro_input_dir, target_name)
-                source_path = os.path.abspath(str(input_path))
+                source_path = normalized_path(input_path)
                 min_len, max_len = length_stats[source_path]
                 target_len = target_lengths[direction]
 
