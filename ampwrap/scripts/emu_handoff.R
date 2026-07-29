@@ -19,15 +19,19 @@ if (length(snakemake@log) > 0) {
 }
 
 emu_dir <- snakemake@params[["emu_dir"]]
+list_file <- normalizePath(
+  unname(unlist(snakemake@input)),
+  mustWork = TRUE
+)
+
+if (length(list_file) == 0) stop("Nessun file '_rel-abundance.tsv' trovato!")
+
 setwd(emu_dir)
 
 cat("Directory EMU:", emu_dir, "\n")
 
-list_file <- list.files(pattern = "_rel-abundance.tsv$")
-
-if (length(list_file) == 0) stop("Nessun file '_rel-abundance.tsv' trovato!")
-
 sample_name_from_file <- function(path) {
+  path <- basename(path)
   gsub("(^combined\\.trimmed_|-(nanofilt|scrubbed)_rel-abundance\\.tsv$|_rel-abundance\\.tsv$)", "", path)
 }
 

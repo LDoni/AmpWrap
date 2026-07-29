@@ -7,6 +7,60 @@ import sys
 import yaml
 import subprocess
 import re
+
+
+LONG_DATABASES = {
+    "rdp": {
+        "name": "RDP",
+        "version": "11.5",
+        "file": "rdp.tar",
+        "md5": "5aebf4f791d32950bfa07e5e0e7ea22a",
+    },
+    "silva": {
+        "name": "SILVA",
+        "version": "138.1",
+        "file": "silva.tar",
+        "md5": "4195810ceec63ed13b9ee3f9c678c52b",
+    },
+    "silva-138.2": {
+        "name": "SILVA",
+        "version": "138.2",
+        "file": "silva-138.2.tar",
+        "md5": "0ef414e54624f5b921d7a8eaee3e7cad",
+    },
+    "unite-fungi": {
+        "name": "UNITE fungi",
+        "version": "8.3",
+        "file": "unite-fungi.tar.gz",
+        "md5": "cd136cac25310f62a32a57fc11a54d71",
+    },
+    "unite-all": {
+        "name": "UNITE all eukaryotes",
+        "version": "8.3",
+        "file": "unite-all.tar.gz",
+        "md5": "dc956ccf991575aedb00f11456451d10",
+    },
+    "emu": {
+        "name": "EMU",
+        "version": "3.0",
+        "file": "emu.tar",
+        "md5": "707f235f515c0dc2e8d74278294241e7",
+    },
+    "emu-2026": {
+        "name": "EMU rrnDB + NCBI",
+        "version": "rrnDB 5.10 / NCBI 2026-03",
+        "file": "taxonomy.tsv + species_taxid.fasta",
+        "md5": "6f38e42f7012571a13a5f9ecaca10966 + e06ceeff3126304a4e43e71167bd9282",
+    },
+    "pr2": {
+        "name": "PR2",
+        "version": "5.1.1",
+        "file": "pr2_version_5.1.1_emu.zip",
+        "md5": "51e1c9eb383e8770d1ccdf805b35444f",
+    },
+}
+
+
 class ReadableHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
     pass
 
@@ -22,6 +76,13 @@ def load_ampwrap_version():
 
 def strip_fastq_extension(path):
     return re.sub(r"\.(fastq|fq)(\.gz)?$", "", os.path.basename(path), flags=re.IGNORECASE)
+
+
+def fastq_extension(path):
+    match = re.search(r"\.((?:fastq|fq)(?:\.gz)?)$", os.path.basename(path), flags=re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Unsupported FASTQ extension: {path}")
+    return match.group(1).lower()
 
 
 def parse_positive_int(value, option_name):
@@ -128,8 +189,13 @@ def run_snakemake(config_path, cores, is_quiet=False):
     import subprocess
     import sys
 
-    conda_bin_dir = os.path.join(os.environ['CONDA_PREFIX'], 'bin')
-    snakefile_path = os.path.join(conda_bin_dir, 'snakefile.long')
+    conda_bin_dir = os.path.join(os.environ.get("CONDA_PREFIX", sys.prefix), "bin")
+    local_snakefile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snakefile.long")
+    snakefile_path = (
+        local_snakefile_path
+        if os.path.exists(local_snakefile_path)
+        else os.path.join(conda_bin_dir, "snakefile.long")
+    )
     print(f"Searching Snakefile in: {snakefile_path}")
     if not os.path.exists(snakefile_path):
         print(f"ERROR: snakefile.long not found in {conda_bin_dir}")
@@ -158,15 +224,9 @@ def run_snakemake(config_path, cores, is_quiet=False):
         sys.exit(1)
 
 def print_db_info():
-    dbs = [
-        {"name": "RDP v11.5", "file": "rdp.tar", "md5": "5aebf4f791d32950bfa07e5e0e7ea22a"},
-        {"name": "SILVA v138.1", "file": "silva.tar", "md5": "4195810ceec63ed13b9ee3f9c678c52b"},
-        {"name": "EMU v3.0", "file": "emu.tar", "md5": "707f235f515c0dc2e8d74278294241e7"},
-        {"name": "PR2 v5.1.1", "file": "pr2_version_5.1.1_emu.zip", "md5": "51e1c9eb383e8770d1ccdf805b35444f"}
-    ]
-    print("Database Name\tFile Name\tMD5")
-    for db in dbs:
-        print(f"{db['name']}\t{db['file']}\t{db['md5']}")
+    print("Choice\tDatabase Name\tVersion\tFile Name\tMD5")
+    for choice, db in LONG_DATABASES.items():
+        print(f"{choice}\t{db['name']}\t{db['version']}\t{db['file']}\t{db['md5']}")
 
 
 
@@ -207,7 +267,7 @@ def main():
     )
     general.add_argument(
         "-d", "--db-choice",
-        choices=["rdp", "silva", "emu", "pr2"],
+        choices=list(LONG_DATABASES),
         default="emu",
         help="EMU database to use for taxonomy assignment.",
     )
@@ -262,6 +322,12 @@ def main():
         print("\nError: -i is required unless --db-info is used.")
         sys.exit(1)
 
+    if args.db_choice in {"silva-138.2", "unite-fungi", "unite-all"}:
+        print(
+            f"WARNING: The upstream EMU {args.db_choice} database is distributed with this notice: "
+            "\"This database has not yet been tested or validated with Emu.\""
+        )
+
 
 
 
@@ -271,7 +337,8 @@ def main():
 
 
     input_dir = args.input_directory
-    output_dir = args.output_directory
+    input_dir = os.path.abspath(os.path.expanduser(input_dir))
+    output_dir = os.path.abspath(os.path.expanduser(args.output_directory))
     nl_min_len = args.nl_min_len
     nl_max_len = args.nl_max_len
     nl_min_qual = args.nl_min_qual
@@ -282,6 +349,15 @@ def main():
     keep_counts = args.keep_counts
     threads = args.threads
 
+    if not os.path.isdir(input_dir):
+        print(f"ERROR: Input directory does not exist: {input_dir}")
+        sys.exit(1)
+    if bool(forward_primer) != bool(reverse_primer):
+        print("ERROR: --cutadapt-forward and --cutadapt-reverse must be provided together.")
+        sys.exit(1)
+    if not 0 <= emu_min_ab <= 1:
+        print("ERROR: --emu-min-ab must be between 0 and 1.")
+        sys.exit(1)
 
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -309,10 +385,29 @@ def main():
 
 
     files = sorted(files)
-    extension = ".".join(os.path.basename(files[0]).split(".")[1:])
+    extensions = {fastq_extension(file) for file in files}
+    if len(extensions) != 1:
+        print(
+            "ERROR: Mixed FASTQ extensions are not supported in one long-read run. "
+            f"Found: {', '.join(sorted(extensions))}"
+        )
+        sys.exit(1)
+    extension = extensions.pop()
     sample_names = [strip_fastq_extension(file) for file in files]
     if len(sample_names) != len(set(sample_names)):
         print("ERROR: Duplicate sample names detected after stripping FASTQ extensions.")
+        sys.exit(1)
+    invalid_sample_names = [
+        sample
+        for sample in sample_names
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", sample)
+    ]
+    if invalid_sample_names:
+        print(
+            "ERROR: Long-read sample names may contain only letters, numbers, '.', '_' and '-', "
+            "and must start with a letter or number. Invalid names: "
+            + ", ".join(invalid_sample_names)
+        )
         sys.exit(1)
     if args.nl_min_len > args.nl_max_len:
         print("ERROR: --nl-min-len must be <= --nl-max-len.")
@@ -328,7 +423,8 @@ def main():
 
     config_path = write_config_yaml(
         input_dir, output_dir, args.db_choice, extension, sample_names, args.trimming, threads, nl_min_len, nl_max_len, nl_min_qual,
-        emu_min_ab, forward_primer, reverse_primer, args.chimera, keep_counts, args.db_dir
+        emu_min_ab, forward_primer, reverse_primer, args.chimera, keep_counts,
+        os.path.abspath(os.path.expanduser(args.db_dir))
     )
     run_snakemake(config_path, threads, is_quiet=is_quiet)
 

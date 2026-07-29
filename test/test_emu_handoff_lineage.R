@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-setClass("Snakemake", slots = c(log = "list", params = "list"))
+setClass("Snakemake", slots = c(input = "list", log = "list", params = "list"))
 
 script_path <- normalizePath(file.path("ampwrap", "scripts", "emu_handoff.R"))
 old_wd <- getwd()
@@ -22,8 +22,19 @@ writeLines(
   file.path(emu_dir, "sample_rel-abundance.tsv")
 )
 
+# This stale file must not be included: the handoff should consume only
+# files explicitly provided by the Snakemake DAG.
+writeLines(
+  c(
+    "unexpected\tcolumns",
+    "stale\tresult"
+  ),
+  file.path(emu_dir, "stale_rel-abundance.tsv")
+)
+
 snakemake <- new(
   "Snakemake",
+  input = list(file.path(emu_dir, "sample_rel-abundance.tsv")),
   log = list(file.path(emu_dir, "emu_phyloseq.log")),
   params = list(emu_dir = emu_dir)
 )

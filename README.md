@@ -447,10 +447,33 @@ Database notes for `ampwrap long`:
 - the default EMU cache is `~/.ampwrap/db/emu`
 - you can override it with `--db-dir`
 - `ampwrap long --help` prints the active default path
+- supported EMU-format databases are EMU, the updated EMU rrnDB 5.10/NCBI March 2026 build, RDP 11.5, SILVA 138.1, SILVA 138.2, UNITE fungi 8.3, UNITE all-eukaryotes 8.3, and PR2 5.1.1
 - PR2 prebuilt EMU databases are normalized internally to the canonical EMU layout required by `emu abundance`
+- SILVA 138.2 and both UNITE builds carry the upstream notice: "This database has not yet been tested or validated with Emu."
+- UNITE is available only in the Nanopore/long-read EMU workflow, not in `ampwrap short`
+
+For example, select the EMU-compatible SILVA 138.2 database with:
+
+```sh
+ampwrap long -i input_directory -o output_directory -d silva-138.2
+```
+
+For Nanopore ITS reads, select the appropriate UNITE build and set length
+filters for the amplified ITS region instead of relying on the full-length 16S
+defaults:
+
+```sh
+ampwrap long \
+  -i input_directory \
+  -o output_directory \
+  -d unite-fungi \
+  --nl-min-len 200 \
+  --nl-max-len 2000
+```
 
 Long-read sample naming:
 - input sample names are derived from the FASTQ basename after stripping `.fastq`, `.fq`, `.fastq.gz`, or `.fq.gz`
+- sample names may contain letters, numbers, `.`, `_`, and `-`, and must start with a letter or number
 - intermediate filenames may still contain `-nanofilt` or `-scrubbed`
 - final sample names in the report and in `emu_phyloseq.rds` are written without those suffixes
 ## Long reads Test Usage

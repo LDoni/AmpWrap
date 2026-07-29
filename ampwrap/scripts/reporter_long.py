@@ -80,18 +80,20 @@ report_table_tsv = display.to_csv(sep="\t", index=False)
 
 taxonomy_info = {
     "silva": ("Silva", "138.1"),
+    "silva-138.2": ("Silva", "138.2"),
+    "unite-fungi": ("UNITE fungi", "8.3"),
+    "unite-all": ("UNITE all eukaryotes", "8.3"),
     "rdp": ("RDP", "11.5"),
     "emu": ("EMU", "3.0"),
+    "emu-2026": ("EMU rrnDB 5.10 + NCBI", "2026-03"),
     "pr2": ("PR2", "5.1.1"),
 }
 db_name, version = taxonomy_info.get(snakemake.params.tax_db, ("Unknown", "N/A"))
 
-start_formatted = datetime.datetime.fromisoformat(snakemake.params.start).strftime("%Y-%m-%d %H:%M:%S")
 end_formatted = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 report_lines = [
     "# Report file",
-    f"Analysis started: {start_formatted}",
     f"Analysis ended: {end_formatted}",
     "",
 ]
