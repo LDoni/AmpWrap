@@ -458,24 +458,13 @@ For example, select the EMU-compatible SILVA 138.2 database with:
 ampwrap long -i input_directory -o output_directory -d silva-138.2
 ```
 
-For Nanopore ITS reads, select the appropriate UNITE build and set length
-filters for the amplified ITS region instead of relying on the full-length 16S
-defaults:
 
-```sh
-ampwrap long \
-  -i input_directory \
-  -o output_directory \
-  -d unite-fungi \
-  --nl-min-len 200 \
-  --nl-max-len 2000
-```
 
 Long-read sample naming:
 - input sample names are derived from the FASTQ basename after stripping `.fastq`, `.fq`, `.fastq.gz`, or `.fq.gz`
 - sample names may contain letters, numbers, `.`, `_`, and `-`, and must start with a letter or number
-- intermediate filenames may still contain `-nanofilt` or `-scrubbed`
-- final sample names in the report and in `emu_phyloseq.rds` are written without those suffixes
+
+
 ## Long reads Test Usage
 You can use a small toy sequencing run to test AmpWrap
 ```sh
@@ -489,11 +478,6 @@ emu combine-outputs <directory_path> <rank>
 For negative control samples we suggest to use the --keep-counts flag to to retain per-taxon counts, and then use tools such as [decontam](https://github.com/benjjneb/decontam), not included in ampwrap.
 
 
-
-
-
-
-Further implementations can be requested by opening a issue
 
 
 ### Running on HPC systems (SLURM/SGE)
@@ -522,6 +506,9 @@ Snakemake natively supports resumability:
   - `--keep-going`: continue executing independent jobs even if one fails  
 
 These options ensure robust and reproducible execution, especially for large cohorts or long HPC runs.
+
+
+Further implementations can be requested by opening a issue
 
 
 ## Troubleshooting
